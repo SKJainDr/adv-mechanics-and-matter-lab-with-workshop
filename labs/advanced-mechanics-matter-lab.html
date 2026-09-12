@@ -1,0 +1,2246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advanced Mechanics &amp; Properties of Matter Lab — Interactive Simulator</title>
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="../assets/icons/favicon-16x16.png">
+<link rel="icon" href="../assets/favicon.ico">
+<style>
+:root{
+  --bg:#FFFBF0; --ink:#14251C; --ink-soft:#2f4a35; --panel:#FBF3E6; --panel-border:#E3C08A;
+  --accent:#1F6E43; --accent-dark:#114A2C; --gold:#C97A27; --gold-dark:#8F5314;
+  --card:#ffffff; --muted:#5a7d68; --danger:#b03a2e; --good:#1F6E43;
+  --shadow: 0 2px 10px rgba(20,37,28,0.08);
+  /* Theme-invariant header colour, matched to the navy used by the other
+     two labs (Laser & Optics, Electricity & Magnetism) so the topbar reads
+     the same across the site and never loses contrast when the theme
+     toggles. Intentionally NOT redefined in [data-theme="dark"] below. */
+  --navy-deep:#081a26;
+}
+[data-theme="dark"]{
+  --bg:#10231a; --ink:#eef7f0; --ink-soft:#bcc9bf; --panel:#16301f; --panel-border:#2f4a35;
+  --accent:#4fae7a; --accent-dark:#8fd6ab; --gold:#e3c08a; --gold-dark:#f0d3ae;
+  --card:#142a1c; --muted:#9fb0a4; --shadow: 0 2px 10px rgba(0,0,0,0.4);
+}
+/* --accent and --gold-dark both turn much lighter in dark theme (see above),
+   so buttons/active-links that use them as a background need dark text in
+   dark theme, not the hardcoded white that works in light theme. */
+[data-theme="dark"] .sidebar a.active{color:var(--bg);}
+[data-theme="dark"] .anim-startstop{color:var(--bg);}
+[data-theme="dark"] .anim-startstop.is-running:hover{color:var(--bg);}
+[data-theme="dark"] .cert-unlock button:hover{color:var(--bg);}
+*{box-sizing:border-box;}
+body{margin:0;font-family:Inter,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);}
+.topbar{background:var(--navy-deep);color:#F8F1E6;padding:14px 22px;display:flex;flex-direction:column;gap:4px;border-bottom:4px solid var(--gold);}
+.topbar .brand{font-size:1.25rem;font-weight:800;display:flex;align-items:center;gap:10px;}
+.topbar .sub{font-size:0.85rem;color:#e3c08a;}
+.topbar .sub a{color:#f0d3ae;font-weight:700;text-decoration:none;}
+.topbar .sub a:hover{text-decoration:underline;}
+#themeToggleBtn{position:absolute;right:20px;top:16px;background:none;border:2px solid #f0d3ae;color:#f0d3ae;
+  border-radius:50%;width:36px;height:36px;font-size:1rem;cursor:pointer;}
+.app{display:flex;min-height:calc(100vh - 90px);}
+.sidebar{width:290px;flex-shrink:0;background:var(--panel);border-right:2px solid var(--panel-border);
+  padding:16px 10px;overflow-y:auto;max-height:calc(100vh - 90px);position:sticky;top:0;}
+.sidebar h4{margin:14px 6px 6px;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--gold-dark);}
+.sidebar a{display:block;padding:7px 10px;border-radius:8px;color:var(--ink-soft);text-decoration:none;font-size:0.92rem;}
+.sidebar a:hover{background:var(--card);color:var(--accent);}
+.sidebar a.active{background:var(--accent);color:#fff;font-weight:700;}
+.content{flex:1;padding:24px 30px 80px;max-width:980px;}
+.panel{display:none;}
+.panel.active{display:block;animation:fadein .25s ease;}
+@keyframes fadein{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+.panel h2{color:var(--accent-dark);border-bottom:3px solid var(--gold);padding-bottom:8px;}
+.panel .kicker{color:var(--gold-dark);font-weight:700;text-transform:uppercase;font-size:0.78rem;letter-spacing:0.05em;margin-bottom:4px;}
+.card{background:var(--card);border:1px solid var(--panel-border);border-radius:12px;padding:18px 20px;
+  box-shadow:var(--shadow);margin:16px 0;}
+.controls-grid{display:grid;grid-template-columns:1fr;gap:14px;}
+.ctrl-row{display:flex;flex-direction:column;gap:4px;}
+.ctrl-row label{font-size:0.9rem;font-weight:600;color:var(--ink-soft);display:flex;justify-content:space-between;}
+.ctrl-row label .val{color:var(--accent);font-weight:800;}
+.ctrl-row input[type=range]{width:100%;accent-color:var(--accent);}
+.ctrl-row select{padding:6px;border-radius:8px;border:1px solid var(--panel-border);background:var(--bg);color:var(--ink);}
+.readouts{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;}
+.readout-box{background:var(--panel);border:1px solid var(--panel-border);border-radius:10px;padding:10px 16px;min-width:150px;}
+.readout-box .rlabel{font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;}
+.readout-box .rval{font-size:1.4rem;font-weight:800;color:var(--accent-dark);}
+[data-theme="dark"] .readout-box .rval{color:var(--accent);}
+canvas{width:100%;height:auto;background:var(--bg);border-radius:10px;border:1px solid var(--panel-border);}
+.anim-card{background:linear-gradient(180deg, var(--card), var(--panel));}
+.anim-label{font-size:0.8rem;font-weight:700;color:var(--gold-dark);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.anim-startstop{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 16px;font-weight:700;font-size:0.82rem;cursor:pointer;letter-spacing:0.02em;text-transform:none;}
+.anim-startstop:hover{background:var(--accent-dark);}
+.anim-startstop.is-running{background:var(--gold);}
+.anim-startstop.is-running:hover{background:var(--gold-dark);}
+.anim-canvas{background:var(--bg);border:2px solid var(--accent);}
+.note{font-size:0.88rem;color:var(--muted);margin-top:10px;line-height:1.5;}
+.verdict{font-weight:800;padding:4px 12px;border-radius:20px;display:inline-block;margin-top:8px;}
+.verdict.pass{background:#1F6E4322;color:var(--good);}
+.verdict.fail{background:#b03a2e22;color:var(--danger);}
+.formula{font-family:'Roboto Mono',monospace;background:var(--panel);border-radius:8px;padding:10px 14px;
+  margin:10px 0;font-size:0.92rem;color:var(--ink-soft);}
+a.guide-link{display:inline-block;margin-top:10px;color:var(--accent);font-weight:700;text-decoration:none;}
+a.guide-link:hover{text-decoration:underline;}
+
+/* workshop precision gauge + certificate unlock box */
+.ws-gauge-row{display:flex;align-items:center;gap:18px;margin:14px 0;flex-wrap:wrap;}
+.ws-gauge-row canvas{flex-shrink:0;width:110px!important;height:110px!important;}
+.ws-gauge-pct{font-size:1.6rem;font-weight:800;color:var(--accent-dark);}
+.cert-unlock{display:none;background:#fdf3da;border:2px dashed var(--gold);border-radius:10px;padding:16px 18px;margin-top:12px;}
+.cert-unlock.show{display:block;}
+.cert-unlock input{padding:8px 12px;border-radius:6px;border:1px solid #ccc;width:240px;margin:8px 10px 0 0;}
+.cert-unlock button{background:var(--gold);color:#2b1a05;border:none;border-radius:6px;padding:9px 18px;font-weight:700;cursor:pointer;margin-top:8px;}
+.cert-unlock button:hover{background:var(--gold-dark);color:#fff;}
+
+/* certificate modal */
+#certOverlay{
+  position:fixed;inset:0;background:rgba(10,26,18,.85);z-index:1000;display:none;
+  align-items:center;justify-content:center;padding:20px;
+}
+#certOverlay.show{display:flex;}
+.certificate{
+  background:#fdf9ef;width:100%;max-width:820px;padding:50px 60px;border-radius:4px;position:relative;
+  border:10px double var(--gold);box-shadow:0 20px 60px rgba(0,0,0,.5);font-family:Georgia,'Times New Roman',serif;color:#14251C;
+  text-align:center;
+}
+.certificate .close-cert{
+  position:absolute;top:10px;right:14px;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#5a6570;
+}
+.certificate .cert-top{display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:10px;}
+.certificate .cert-top img.cert-rect-logo{height:42px;width:auto;object-fit:contain;}
+.certificate .cert-orb{width:40px;height:40px;border-radius:50%;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.2);flex:none;}
+.certificate .cert-orb img{width:100%;height:100%;object-fit:cover;display:block;}
+.certificate .seal{font-size:2.4rem;}
+.certificate h1{font-size:1.9rem;margin:6px 0 2px;letter-spacing:.02em;color:var(--accent-dark);}
+.certificate .sub{font-family:Inter,sans-serif;color:#5a6570;font-size:.85rem;text-transform:uppercase;letter-spacing:.1em;}
+.certificate .name{font-size:2rem;margin:22px 0 4px;color:var(--gold-dark);border-bottom:2px solid var(--gold);display:inline-block;padding:0 20px 6px;}
+.certificate .body-text{font-family:Inter,sans-serif;font-size:1.02rem;color:#333;margin:16px auto;max-width:560px;line-height:1.7;}
+.certificate .workshop-name{font-weight:700;color:var(--accent-dark);}
+.certificate .score-line{font-family:monospace;color:var(--accent);font-weight:700;}
+.certificate .sign-row{display:flex;justify-content:space-between;margin-top:46px;padding:0 20px;font-family:Inter,sans-serif;}
+.certificate .sign-block{text-align:center;}
+.certificate .sign-block .line{border-top:1px solid #14251C;width:220px;margin-bottom:6px;padding-top:6px;}
+.certificate .sign-block .who{font-weight:700;font-size:.92rem;}
+.certificate .sign-block .role{font-size:.8rem;color:#5a6570;}
+.certificate .date-line{font-family:Inter,sans-serif;font-size:.85rem;color:#5a6570;margin-top:14px;}
+.cert-actions{text-align:center;margin-top:24px;display:flex;gap:12px;justify-content:center;}
+.cert-actions .btn{background:var(--gold);color:#2b1a05;border:none;border-radius:6px;padding:10px 20px;font-weight:700;cursor:pointer;}
+.cert-actions .btn.ghost{background:#fff;color:#0e2a3d;border:1px solid #ccc;}
+@media print{
+  body *{visibility:hidden;}
+  #certOverlay, #certOverlay *{visibility:visible;}
+  #certOverlay{position:fixed;inset:0;background:#fff;display:flex;}
+  .certificate{box-shadow:none;border:10px double var(--gold);}
+  .cert-actions, .close-cert{display:none!important;}
+}
+.safety-table{width:100%;border-collapse:collapse;margin:14px 0;}
+.safety-table th,.safety-table td{border:1px solid var(--panel-border);padding:8px 10px;font-size:0.88rem;text-align:left;}
+.safety-table th{background:var(--panel);color:var(--accent-dark);}
+@media (max-width: 860px){
+  .app{flex-direction:column;}
+  .sidebar{width:100%;max-height:280px;position:relative;}
+  .content{padding:16px;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><img src="../assets/brand-orb.jpg" alt="Invertis University mark" style="height:30px;width:30px;border-radius:50%;object-fit:cover;flex:none;" onerror="this.style.display='none'"><img src="../assets/invertis-logo.png" alt="Invertis University logo" style="height:30px;width:auto;" onerror="this.style.display='none'"> Advanced Mechanics &amp; Properties of Matter Lab</div>
+  <div class="sub">
+    Interactive simulations for rotational dynamics, elasticity, fluid properties &amp; oscillations &middot;
+    <a href="../docs-mechanics/index.html">📖 Full User Guide &amp; Lab Manual &rarr;</a>
+  </div>
+  <button id="themeToggleBtn" title="Toggle theme">🌙</button>
+</div>
+
+<div class="app">
+  <nav class="sidebar" id="sidebarNav"></nav>
+  <main class="content" id="panelHost"></main>
+</div>
+
+<div id="certOverlay">
+  <div class="certificate" id="certificateBody">
+    <button class="close-cert" onclick="closeCertificate()">✕</button>
+    <div class="cert-top">
+      <img class="cert-rect-logo" src="../assets/invertis-logo-light.png" alt="Invertis University logo">
+      <div class="cert-orb"><img src="../assets/brand-orb.jpg" alt="Invertis University mark"></div>
+    </div>
+    <div class="seal">🏆</div>
+    <h1>Certificate of Achievement</h1>
+    <div class="sub">Advanced Mechanics &amp; Properties of Matter Lab &middot; Industrial Applications Workshop Series</div>
+    <div class="body-text">This certifies that</div>
+    <div class="name" id="certName">Student Name</div>
+    <div class="body-text">
+      has successfully completed the <span class="workshop-name" id="certWorkshop">Workshop</span>
+      with a precision score of <span class="score-line" id="certScore">0%</span>,
+      demonstrating competent, safe handling of the process parameters involved.
+    </div>
+    <div class="date-line" id="certDate"></div>
+    <div class="sign-row">
+      <div class="sign-block">
+        <div class="line"></div>
+        <div class="who">Dr. S. K. Jain</div>
+        <div class="role">Associate Professor in Physics, Department of Applied Sciences and Humanities, Invertis University, Bareilly, India<br>Lab Professor</div>
+      </div>
+      <div class="sign-block">
+        <div class="line"></div>
+        <div class="who">&nbsp;</div>
+        <div class="role">Student Signature</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="cert-actions" id="certActionsBar" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:1001;">
+  <button class="btn" onclick="window.print()">🖨️ Print Certificate</button>
+  <button class="btn ghost" onclick="closeCertificate()">Close</button>
+</div>
+
+<script>
+(function(){
+  var KEY='drskjain-theme';
+  var btn=document.getElementById('themeToggleBtn');
+  function apply(theme){
+    document.documentElement.setAttribute('data-theme', theme);
+    if(btn) btn.textContent = theme==='dark' ? '☀' : '🌙';
+  }
+  var saved = localStorage.getItem(KEY);
+  if(!saved){ saved = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+  apply(saved);
+  if(btn){
+    btn.addEventListener('click', function(){
+      var cur = document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
+      localStorage.setItem(KEY, cur);
+      apply(cur);
+    });
+  }
+})();
+</script>
+
+<script>
+window.__MECH_HELPERS__ = (function(){
+  function hatchSupport(ctx, x1, x2, y, theme, dir){
+    dir = dir || -1;
+    ctx.strokeStyle = theme.ink; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x1,y); ctx.lineTo(x2,y); ctx.stroke();
+    ctx.lineWidth = 1.4;
+    var n = Math.max(4, Math.round((x2-x1)/14));
+    for(var i=0;i<n;i++){
+      var x = x1 + (x2-x1)*i/(n-1);
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-8, y+16*dir); ctx.stroke();
+    }
+  }
+  function wallSupport(ctx, x, y1, y2, theme, dir){
+    dir = dir || 1;
+    ctx.strokeStyle = theme.ink; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x,y1); ctx.lineTo(x,y2); ctx.stroke();
+    ctx.lineWidth = 1.4;
+    var n = Math.max(4, Math.round((y2-y1)/14));
+    for(var i=0;i<n;i++){
+      var y = y1 + (y2-y1)*i/(n-1);
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+16*dir, y-8); ctx.stroke();
+    }
+  }
+  function spring(ctx, x1, y1, x2, y2, coils, amp, theme){
+    var dx = x2-x1, dy = y2-y1;
+    var len = Math.sqrt(dx*dx+dy*dy);
+    var ux = dx/len, uy = dy/len;
+    var px = -uy, py = ux;
+    var n = coils*2;
+    ctx.strokeStyle = theme.accent; ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.moveTo(x1,y1);
+    for(var i=1;i<=n;i++){
+      var t = i/n;
+      var side = (i%2===0)? 1 : -1;
+      var bx = x1+ux*len*t, by = y1+uy*len*t;
+      if(i<n){ bx += px*amp*side; by += py*amp*side; }
+      ctx.lineTo(bx,by);
+    }
+    ctx.stroke();
+  }
+  function dashpot(ctx, x1, y1, x2, y2, theme, wOverride){
+    var dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
+    var ux=dx/len, uy=dy/len, px=-uy, py=ux;
+    var cylLen = len*0.55;
+    var cx1=x1, cy1=y1, cx2=x1+ux*cylLen, cy2=y1+uy*cylLen;
+    ctx.strokeStyle = theme.gold; ctx.lineWidth = 2.2;
+    // cylinder (rectangle)
+    var w=wOverride||9;
+    ctx.beginPath();
+    ctx.moveTo(cx1+px*w, cy1+py*w); ctx.lineTo(cx2+px*w, cy2+py*w);
+    ctx.moveTo(cx1-px*w, cy1-py*w); ctx.lineTo(cx2-px*w, cy2-py*w);
+    ctx.moveTo(cx1+px*w, cy1+py*w); ctx.lineTo(cx1-px*w, cy1-py*w);
+    ctx.stroke();
+    // piston rod
+    ctx.beginPath(); ctx.moveTo(cx2*0.4+cx1*0.6, cy2*0.4+cy1*0.6); ctx.lineTo(x2,y2); ctx.stroke();
+  }
+  function weight(ctx, cx, cy, r, theme, label, fillOverride){
+    ctx.fillStyle = fillOverride || theme.gold;
+    ctx.strokeStyle = theme.ink; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    if(label){
+      ctx.fillStyle = theme.ink; ctx.font='700 11px Inter,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(label, cx, cy);
+      ctx.textBaseline='alphabetic';
+    }
+  }
+  function rod(ctx, x1,y1,x2,y2, w, theme, fill){
+    var dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
+    var ux=dx/len, uy=dy/len, px=-uy, py=ux;
+    ctx.fillStyle = fill || theme.panel;
+    ctx.strokeStyle = theme.ink; ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(x1+px*w/2, y1+py*w/2);
+    ctx.lineTo(x2+px*w/2, y2+py*w/2);
+    ctx.lineTo(x2-px*w/2, y2-py*w/2);
+    ctx.lineTo(x1-px*w/2, y1-py*w/2);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  function label(ctx, x, y, text, theme, size, color, align){
+    ctx.fillStyle = color || theme.ink;
+    ctx.font = (size||12)+'px Inter,sans-serif';
+    ctx.textAlign = align||'left';
+    ctx.fillText(text, x, y);
+    ctx.textAlign='left';
+  }
+  function clear(ctx,W,H,theme){
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = theme.bg; ctx.fillRect(0,0,W,H);
+  }
+  return {hatchSupport:hatchSupport, wallSupport:wallSupport, spring:spring, dashpot:dashpot,
+          weight:weight, rod:rod, label:label, clear:clear};
+})();
+</script>
+<script>
+window.__MECH_PANELS__ = window.__MECH_PANELS__ || {};
+(function(P){
+
+P["panel-bifilar"] = {
+  navLabel: "1. Bifilar Suspension", kicker:"Rotational Dynamics · Experiment 1",
+  title:"Bifilar Suspension — Moment of Inertia",
+  formula:"I = M g b&sup2; T&sup2; / (4&pi;&sup2; l)",
+  controls:[
+    {key:"l", label:"Thread length, l", min:40, max:160, step:1, def:100, unit:"cm"},
+    {key:"b", label:"Half-separation, b", min:5, max:25, step:0.5, def:15, unit:"cm"},
+    {key:"M", label:"Mass of bar, M", min:100, max:600, step:5, def:300, unit:"g"}
+  ],
+  primaryIndex:0,
+  chartXLabel:"Thread length, l (cm)", chartYLabel:"T² (s²)", chartTitle:"T² vs Thread Length",
+  chartNote:"Drag the sliders — the marker shows your current setting on the T² vs l curve. In the real experiment, only l is swept while b and M stay fixed.",
+  anim: {
+    height: 230,
+    caption: "Top-down view: the bar yaws back and forth about the vertical axis through its centre, exactly as it does in the real suspension.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var T = out.readouts[0].value;
+      var cx=W/2;
+      var thetaMax = 22*Math.PI/180;
+      var theta = thetaMax*Math.cos(2*Math.PI*t/T);
+      var mind = Math.min(W,H);
+      var bScale = mind/230*2.4;
+      var bPx = vals.b*bScale;
+      var barHalfPx = bPx*1.4;
+      var lMin=40,lMax=160, gapMin=mind*0.16, gapMax=mind*0.64;
+      var gapPx = gapMin + (vals.l-lMin)/(lMax-lMin)*(gapMax-gapMin);
+      var anchorY = mind*0.15;
+      var barY = anchorY + gapPx;
+      HLP.hatchSupport(ctx, cx-90, cx+90, anchorY-4, theme);
+      // string attachment points on the bar sit at ±b from centre (half-separation),
+      // directly under the fixed ceiling anchors when the bar is at rest (theta=0),
+      // so the strings are vertical there and angle inward only as the bar yaws
+      var a1x = cx-bPx, a2x = cx+bPx;
+      var x1 = cx - bPx*Math.cos(theta), x2 = cx + bPx*Math.cos(theta);
+      var bx1 = cx - barHalfPx*Math.cos(theta), bx2 = cx + barHalfPx*Math.cos(theta);
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=1.6;
+      ctx.beginPath(); ctx.moveTo(a1x,anchorY); ctx.lineTo(x1,barY); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(a2x,anchorY); ctx.lineTo(x2,barY); ctx.stroke();
+      HLP.rod(ctx,bx1,barY,bx2,barY,14,theme);
+      HLP.label(ctx, cx, barY+40, "T = "+T.toFixed(3)+" s", theme, 13, theme.accent, "center");
+      HLP.label(ctx, W-14, 16, "l = "+vals.l.toFixed(0)+" cm", theme, 10.5, theme.ink, "right");
+    }
+  },
+  compute:function(vals){
+    var g=981, Lbar=100;
+    var Itrue = (vals.M*Lbar*Lbar)/12;
+    var T = 2*Math.PI*Math.sqrt((Itrue*vals.l)/(vals.M*g*vals.b*vals.b));
+    return {readouts:[{label:"Period T", value:T, unit:"s"},{label:"T²", value:T*T, unit:"s²"}], chartY:T*T};
+  },
+  guideHref:"../docs-mechanics/experiments/bifilar-suspension/"
+};
+
+P["panel-torsional"] = {
+  navLabel:"2. Torsional Pendulum", kicker:"Rotational Dynamics · Experiment 2",
+  title:"Torsional Pendulum — Rigidity Modulus (Two-Body Method)",
+  formula:"C = &pi;&eta;r&#8308;/2l  &nbsp; T=2&pi;&radic;(I/C) &nbsp; T&prime;=2&pi;&radic;((I+2md&sup2;)/C)",
+  controls:[
+    {key:"l", label:"Wire length, l", min:30, max:100, step:1, def:60, unit:"cm"},
+    {key:"r", label:"Wire radius, r", min:0.2, max:0.8, step:0.01, def:0.4, unit:"mm"},
+    {key:"d", label:"Added-mass distance, d", min:4, max:12, step:0.5, def:8, unit:"cm"},
+    {key:"m", label:"Each added mass, m", min:50, max:250, step:5, def:150, unit:"g"}
+  ],
+  primaryIndex:2,
+  chartXLabel:"Added-mass distance, d (cm)", chartYLabel:"T′² − T² (s²)", chartTitle:"T′²−T² vs d",
+  chartNote:"Adding symmetric masses at radius d always raises the period from T to T′; the increase grows with d.",
+  anim: {
+    height: 240,
+    caption: "The disc twists back and forth about the wire's axis; when added masses are engaged their period (T′) is slower than the bare disc (T).",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var T = out.readouts[0].value, Tp = out.readouts[1].value;
+      var cx=W/2, topY=26;
+      var mind = Math.min(W,H);
+      var lMin=30,lMax=100, gapMin=mind*0.30, gapMax=mind*0.70;
+      var gapPx = gapMin + (vals.l-lMin)/(lMax-lMin)*(gapMax-gapMin);
+      var discY = topY + gapPx;
+      var R = mind*0.20;
+      var squash = 0.40;
+      var thick = R*0.24;
+      HLP.hatchSupport(ctx, cx-40, cx+40, topY, theme);
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(cx,topY); ctx.lineTo(cx,discY); ctx.stroke();
+      var theta = (18*Math.PI/180)*Math.cos(2*Math.PI*t/Tp);
+      // mass radius (on-screen) scales with the added mass value, and its
+      // distance from the disc centre scales with the added-mass distance d
+      var massR = 6 + (vals.m-50)/(250-50)*24;
+      var dR = R*Math.min(0.92, (vals.d/13)*0.85);
+      ctx.save(); ctx.translate(cx,discY);
+      // the disc is viewed from front-and-slightly-above, so it always
+      // projects to a fixed oval outline; only markings on its face sweep
+      // around within that oval as it twists about the (vertical) wire axis
+      ctx.fillStyle=theme.panel; ctx.strokeStyle=theme.ink; ctx.lineWidth=1.6;
+      // bottom rim (shows disc thickness)
+      ctx.beginPath(); ctx.ellipse(0,thick,R,R*squash,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-R,0); ctx.lineTo(-R,thick);
+      ctx.moveTo(R,0); ctx.lineTo(R,thick);
+      ctx.stroke();
+      // top (rotating) face
+      ctx.beginPath(); ctx.ellipse(0,0,R,R*squash,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      // radial reference line + masses, swept around the oval as the disc twists
+      var ex = R*Math.cos(theta), ey = R*squash*Math.sin(theta);
+      ctx.strokeStyle=theme.accent; ctx.lineWidth=2.4;
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(ex,ey); ctx.stroke();
+      var mx = dR*Math.cos(theta), my = dR*squash*Math.sin(theta);
+      HLP.weight(ctx, mx, my, massR, theme, null, theme.gold);
+      HLP.weight(ctx, -mx, -my, massR, theme, null, theme.gold);
+      ctx.restore();
+      HLP.label(ctx, cx, discY+R*squash+thick+30, "T="+T.toFixed(2)+"s   T′="+Tp.toFixed(2)+"s", theme, 13, theme.accent, "center");
+      HLP.label(ctx, W-14, 16, "l = "+vals.l.toFixed(0)+" cm", theme, 10.5, theme.ink, "right");
+    }
+  },
+  compute:function(vals){
+    var eta=8.0e11, Idisc=3000;
+    var rcm = vals.r/10;
+    var C = Math.PI*eta*Math.pow(rcm,4)/(2*vals.l);
+    var T = 2*Math.PI*Math.sqrt(Idisc/C);
+    var Tp = 2*Math.PI*Math.sqrt((Idisc+2*vals.m*vals.d*vals.d)/C);
+    return {readouts:[{label:"Period, disc alone (T)", value:T, unit:"s"},{label:"Period with masses (T′)", value:Tp, unit:"s"}], chartY: Tp*Tp - T*T};
+  },
+  guideHref:"../docs-mechanics/experiments/torsional-pendulum/"
+};
+
+P["panel-flywheel"] = {
+  navLabel:"3. Flywheel", kicker:"Rotational Dynamics · Experiment 3",
+  title:"Flywheel — Moment of Inertia &amp; Frictional Couple",
+  formula:"I = m r&sup2;(2gh &minus; &omega;&sup2;r&sup2;)/&omega;&sup2; &times; n&#8322;/(n&#8321;+n&#8322;)",
+  controls:[
+    {key:"m", label:"Falling mass, m", min:50, max:300, step:5, def:150, unit:"g"},
+    {key:"r", label:"Axle radius, r", min:0.5, max:2.5, step:0.05, def:1.5, unit:"cm"},
+    {key:"h", label:"Height of fall, h", min:50, max:150, step:2, def:100, unit:"cm"},
+    {key:"n1", label:"Cord turns, n₁", min:5, max:15, step:1, def:10, unit:"turns"}
+  ],
+  primaryIndex:0,
+  chartXLabel:"Falling mass, m (g)", chartYLabel:"1/t² (s⁻²)", chartTitle:"1/t² vs Falling Mass",
+  chartNote:"Larger falling masses accelerate the system faster, shortening the fall time t.",
+  anim: {
+    height: 250,
+    caption: "The falling mass spins the flywheel up to speed, then the cord detaches and the wheel gradually coasts to rest under friction alone.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var tFall = out.readouts[0].value, n2 = out.readouts[1].value;
+      var omega = 2*Math.PI*vals.n1/tFall;
+      var tDecel = 4*Math.PI*n2/omega;
+      var cycle = tFall + tDecel + 0.6;
+      var tt = t % cycle;
+      var cx = W*0.32, cy = H*0.42;
+      var R = Math.min(W,H)*(0.24 + (vals.r-0.5)/(2.5-0.5)*0.06);
+      var axleR = 4 + (vals.r-0.5)/(2.5-0.5)*11;
+      HLP.hatchSupport(ctx, cx-30, cx+30, cy-R-22, theme);
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(cx,cy-R-20); ctx.lineTo(cx,cy-R); ctx.stroke();
+      var angle;
+      if(tt<=tFall){ angle = 0.5*(omega/tFall)*tt*tt; }
+      else if(tt<=tFall+tDecel){ var tau=tt-tFall; angle = 2*Math.PI*vals.n1 + omega*tau - 0.5*(omega/tDecel)*tau*tau; }
+      else { angle = 2*Math.PI*vals.n1 + 0.5*omega*tDecel; }
+      ctx.save(); ctx.translate(cx,cy); ctx.rotate(angle);
+      ctx.fillStyle=theme.panel; ctx.strokeStyle=theme.ink; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(0,0,R,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      for(var k=0;k<8;k++){
+        var a = k*Math.PI/4;
+        ctx.strokeStyle=theme.grid; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(R*Math.cos(a),R*Math.sin(a)); ctx.stroke();
+      }
+      ctx.strokeStyle=theme.accent; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(R*0.9,0); ctx.stroke();
+      // axle hub, sized to the axle-radius control — this is what the cord actually wraps around
+      ctx.fillStyle=theme.gold; ctx.strokeStyle=theme.ink; ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.arc(0,0,axleR,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.restore();
+      // falling mass, string — the cord attaches at the axle hub's edge, not the rim
+      var massY;
+      var h = vals.h;
+      var scaleH = (H*0.42)/h;
+      if(tt<=tFall){ massY = cy-R + (h*Math.pow(tt/tFall,2))*scaleH*0.6; }
+      else { massY = cy-R + h*scaleH*0.6; }
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.moveTo(cx+axleR,cy); ctx.lineTo(cx+axleR,massY); ctx.stroke();
+      if(tt<=tFall) HLP.weight(ctx, cx+axleR, massY, 9, theme, "m", theme.gold);
+      var phase = tt<=tFall ? "Falling — spinning up" : (tt<=tFall+tDecel ? "Coasting — friction slowing it" : "Momentarily at rest");
+      HLP.label(ctx, W*0.6, 30, phase, theme, 13, theme.accent);
+      HLP.label(ctx, W*0.6, 52, "t="+tFall.toFixed(2)+"s   n\u2082="+n2.toFixed(1)+" rev", theme, 12.5, theme.ink);
+      HLP.label(ctx, W*0.6, 72, "axle radius r = "+vals.r.toFixed(2)+" cm", theme, 11, theme.ink);
+    }
+  },
+  compute:function(vals){
+    var g=981, Itrue=4000, tauF=20000;
+    var num = 2*(vals.m*g*vals.h - tauF*2*Math.PI*vals.n1);
+    var den = (vals.m*vals.r*vals.r + Itrue);
+    var omega2 = Math.max(num/den, 1e-6);
+    var omega = Math.sqrt(omega2);
+    var theta1 = 2*Math.PI*vals.n1;
+    var t = 2*theta1/omega;
+    var n2 = (Itrue*omega2)/(4*Math.PI*tauF);
+    return {readouts:[{label:"Fall time, t", value:t, unit:"s"},{label:"Extra revolutions, n₂", value:n2, unit:"rev"}], chartY: 1/(t*t)};
+  },
+  guideHref:"../docs-mechanics/experiments/flywheel/"
+};
+
+P["panel-compound-pendulum"] = {
+  navLabel:"4. Compound Pendulum", kicker:"Rotational Dynamics · Experiment 4",
+  title:"Compound (Bar) Pendulum — g and Radius of Gyration",
+  formula:"T = 2&pi;&radic;((k&sup2;+h&sup2;)/gh)",
+  controls:[
+    {key:"h", label:"Pivot distance from C.G., h", min:5, max:45, step:0.5, def:20, unit:"cm"},
+    {key:"Lbar", label:"Bar length", min:80, max:120, step:1, def:100, unit:"cm"}
+  ],
+  primaryIndex:0,
+  chartXLabel:"Pivot distance, h (cm)", chartYLabel:"Period, T (s)", chartTitle:"Period vs Pivot Distance",
+  chartNote:"The U-shaped curve has a minimum; conjugate points are pairs of h with equal T on either side of the minimum.",
+  anim: {
+    height: 240,
+    caption: "The bar swings about its pivot like a physical pendulum; drag the pivot distance to see the period change (minimum away from the centre of gravity).",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var T = out.readouts[0].value;
+      var pivX = W/2, pivY = 34;
+      HLP.hatchSupport(ctx, pivX-30, pivX+30, pivY-10, theme);
+      var thetaMax = 20*Math.PI/180;
+      var theta = thetaMax*Math.cos(2*Math.PI*t/T);
+      var pxPerCm = Math.min(W,H)*0.62/100;
+      var half = vals.Lbar/2;
+      var aboveCm = Math.max(half - vals.h, 3);
+      var belowCm = half + vals.h;
+      var above = aboveCm*pxPerCm, below = belowCm*pxPerCm;
+      ctx.save();
+      ctx.translate(pivX,pivY); ctx.rotate(theta);
+      HLP.rod(ctx,0,-above,0,below,16,theme);
+      ctx.fillStyle=theme.ink; ctx.beginPath(); ctx.arc(0,0,4,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+      HLP.label(ctx, W/2, H-16, "T = "+T.toFixed(3)+" s   (pivot at h = "+vals.h.toFixed(1)+" cm from C.G., bar = "+vals.Lbar.toFixed(0)+" cm)", theme, 12.5, theme.accent, "center");
+    }
+  },
+  compute:function(vals){
+    var g=981;
+    var k2 = (vals.Lbar*vals.Lbar)/12;
+    var T = 2*Math.PI*Math.sqrt((k2+vals.h*vals.h)/(g*vals.h));
+    return {readouts:[{label:"Period T", value:T, unit:"s"},{label:"Radius of gyration k", value:Math.sqrt(k2), unit:"cm"}], chartY:T};
+  },
+  guideHref:"../docs-mechanics/experiments/compound-pendulum/"
+};
+
+P["panel-cantilever"] = {
+  navLabel:"5. Non-Uniform Bending", kicker:"Elasticity of Solids · Experiment 5",
+  title:"Non-Uniform (Cantilever) Bending — Young's Modulus",
+  formula:"y = 4Wl&sup3;/(Ybd&sup3;)",
+  controls:[
+    {key:"M", label:"Load, M", min:50, max:500, step:5, def:200, unit:"g"},
+    {key:"l", label:"Cantilever length, l", min:15, max:45, step:1, def:30, unit:"cm"},
+    {key:"b", label:"Breadth, b", min:1.0, max:3.0, step:0.1, def:2.0, unit:"cm"},
+    {key:"d", label:"Thickness, d", min:0.2, max:0.8, step:0.02, def:0.4, unit:"cm"}
+  ],
+  primaryIndex:0,
+  chartXLabel:"Load, M (g)", chartYLabel:"Depression, y (mm)", chartTitle:"Depression vs Load",
+  chartNote:"A straight line through the origin is expected — its slope gives Young's modulus once l, b, d are known.",
+  anim: {
+    height: 220,
+    caption: "The cantilever settles into its bent shape under the load, exactly as it would just after the weight is hung on.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var y_mm = out.readouts[0].value;
+      var wallX = W*0.14, beamY = H*0.34;
+      var pxPerCm = (W*0.94-wallX)/45;
+      var beamLen = vals.l*pxPerCm;
+      var beamW = 3 + (vals.d-0.2)/(0.8-0.2)*8;
+      var massR = 6 + (vals.M-50)/(500-50)*14;
+      HLP.wallSupport(ctx, wallX, beamY-50, beamY+50, theme, -1);
+      var settle = Math.exp(-t*1.8)*Math.cos(9*t)*0.12;
+      var maxDefl = Math.min(H*0.45, 14 + y_mm*9) * (1+settle);
+      var n=24, pts=[];
+      for(var i=0;i<=n;i++){
+        var f = i/n;
+        var defl = maxDefl*(3*f*f - f*f*f)/2;
+        pts.push([wallX+beamLen*f, beamY+defl]);
+      }
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(wallX,beamY); ctx.lineTo(wallX+beamLen,beamY); ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle=theme.accent; ctx.lineWidth=beamW; ctx.lineCap='round';
+      ctx.beginPath(); pts.forEach(function(p,i){ if(i===0) ctx.moveTo(p[0],p[1]); else ctx.lineTo(p[0],p[1]); }); ctx.stroke();
+      ctx.lineCap='butt';
+      var tip = pts[pts.length-1];
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.moveTo(tip[0],tip[1]); ctx.lineTo(tip[0],tip[1]+26); ctx.stroke();
+      HLP.weight(ctx, tip[0], tip[1]+34+massR-10, massR, theme, "M", theme.gold);
+      HLP.label(ctx, W*0.55, H-14, "Depression y = "+y_mm.toFixed(2)+" mm   (l="+vals.l.toFixed(0)+"cm, d="+vals.d.toFixed(2)+"cm, M="+vals.M.toFixed(0)+"g)", theme, 11.5, theme.accent);
+    }
+  },
+  compute:function(vals){
+    var g=981, Y=1.0e12;
+    var y_cm = (4*vals.M*g*Math.pow(vals.l,3))/(Y*vals.b*Math.pow(vals.d,3));
+    return {readouts:[{label:"Depression y", value:y_cm*10, unit:"mm"}], chartY:y_cm*10};
+  },
+  guideHref:"../docs-mechanics/experiments/non-uniform-bending/"
+};
+
+P["panel-uniform-bending"] = {
+  navLabel:"6. Uniform Bending", kicker:"Elasticity of Solids · Experiment 6",
+  title:"Uniform Bending — Young's Modulus by Elevation",
+  formula:"e = 3Mga l&sup2;/(2bd&sup3;Y)",
+  controls:[
+    {key:"M", label:"Each end load, M", min:50, max:500, step:5, def:250, unit:"g"},
+    {key:"a", label:"Overhang, a", min:5, max:20, step:0.5, def:10, unit:"cm"},
+    {key:"l", label:"Knife-edge separation, l", min:20, max:60, step:1, def:40, unit:"cm"},
+    {key:"b", label:"Breadth, b", min:1.0, max:3.0, step:0.1, def:2.0, unit:"cm"},
+    {key:"d", label:"Thickness, d", min:0.2, max:0.8, step:0.02, def:0.4, unit:"cm"}
+  ],
+  primaryIndex:0,
+  chartXLabel:"Each end load, M (g)", chartYLabel:"Elevation, e (mm)", chartTitle:"Elevation vs End Load",
+  chartNote:"A straight line through the origin is expected — its slope gives Young's modulus once a, l, b, d are known.",
+  anim: {
+    height: 220,
+    caption: "The beam bows into a circular arc between the two knife edges as the symmetric end loads bend it upward at the centre.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var e_mm = out.readouts[0].value;
+      var midY = H*0.55;
+      var pxPerCm = (W*0.86)/100;
+      var spanL = vals.l*pxPerCm;
+      var overhang = vals.a*pxPerCm;
+      var cx0 = W/2, kx1 = cx0-spanL/2, kx2 = cx0+spanL/2;
+      var beamW = 3 + (vals.d-0.2)/(0.8-0.2)*8;
+      var massR = 6 + (vals.M-50)/(500-50)*12;
+      function support(x){
+        ctx.fillStyle=theme.panel; ctx.strokeStyle=theme.ink; ctx.lineWidth=1.6;
+        ctx.beginPath(); ctx.moveTo(x-12,midY+22); ctx.lineTo(x+12,midY+22); ctx.lineTo(x,midY+4); ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+      support(kx1); support(kx2);
+      var settle = Math.exp(-t*1.8)*Math.cos(9*t)*0.12;
+      var elev = Math.min(H*0.22, 8+e_mm*20)*(1+settle);
+      var n=24, pts=[];
+      for(var i=0;i<=n;i++){
+        var f=i/n;
+        var x = (kx1-overhang) + (spanL+2*overhang)*f;
+        var d;
+        if(x<kx1) d=0; else if(x>kx2) d=0; else {
+          var ff=(x-kx1)/spanL; d = -elev*4*ff*(1-ff);
+        }
+        pts.push([x, midY+d]);
+      }
+      ctx.strokeStyle=theme.accent; ctx.lineWidth=beamW; ctx.lineCap='round';
+      ctx.beginPath(); pts.forEach(function(p,i){ if(i===0) ctx.moveTo(p[0],p[1]); else ctx.lineTo(p[0],p[1]); }); ctx.stroke();
+      ctx.lineCap='butt';
+      var left = pts[0], right = pts[pts.length-1];
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.moveTo(left[0],left[1]); ctx.lineTo(left[0],left[1]+24); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(right[0],right[1]); ctx.lineTo(right[0],right[1]+24); ctx.stroke();
+      HLP.weight(ctx,left[0],left[1]+32+massR-9,massR,theme,"M",theme.gold);
+      HLP.weight(ctx,right[0],right[1]+32+massR-9,massR,theme,"M",theme.gold);
+      HLP.label(ctx, W/2, H-12, "Elevation e = "+e_mm.toFixed(3)+" mm   (a="+vals.a.toFixed(1)+"cm, l="+vals.l.toFixed(0)+"cm, d="+vals.d.toFixed(2)+"cm)", theme, 11, theme.accent, "center");
+    }
+  },
+  compute:function(vals){
+    var g=981, Y=1.0e12;
+    var e_cm = (3*vals.M*g*vals.a*vals.l*vals.l)/(2*vals.b*Math.pow(vals.d,3)*Y);
+    return {readouts:[{label:"Elevation e", value:e_cm*10, unit:"mm"}], chartY:e_cm*10};
+  },
+  guideHref:"../docs-mechanics/experiments/uniform-bending/"
+};
+
+P["panel-searle"] = {
+  navLabel:"7. Searle's Apparatus", kicker:"Elasticity of Solids · Experiment 7",
+  title:"Searle's Apparatus — Young's Modulus by Direct Elongation",
+  formula:"l_ext = MgL/(&pi;r&sup2;Y)",
+  controls:[
+    {key:"M", label:"Load, M", min:200, max:2000, step:10, def:1000, unit:"g"},
+    {key:"L", label:"Wire length, L", min:100, max:300, step:2, def:200, unit:"cm"},
+    {key:"r", label:"Wire radius, r", min:0.2, max:0.6, step:0.01, def:0.35, unit:"mm"}
+  ],
+  primaryIndex:0,
+  chartXLabel:"Load, M (g)", chartYLabel:"Elongation (mm)", chartTitle:"Elongation vs Load",
+  chartNote:"A straight line through the origin is expected — its slope gives Young's modulus once L and r are known.",
+  anim: {
+    height: 220,
+    caption: "Two wires hang side by side; the loaded (experimental) wire stretches very slightly more than the steady reference wire, tilting the spirit level between them.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var lext_mm = out.readouts[0].value;
+      var topY=26;
+      var mind = Math.min(W,H);
+      var LMin=100,LMax=300, gapMin=mind*0.30, gapMax=mind*0.78;
+      var frameY = topY + gapMin + (vals.L-LMin)/(LMax-LMin)*(gapMax-gapMin);
+      var massR = 7 + (vals.M-200)/(2000-200)*18;
+      var x1=W*0.30, x2=W*0.48;
+      HLP.hatchSupport(ctx, x1-30, x2+30, topY, theme);
+      var settle = 1-Math.exp(-t*1.5);
+      var stretchPx = Math.min(40, 4+lext_mm*40)*settle;
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=1.8;
+      ctx.beginPath(); ctx.moveTo(x1,topY); ctx.lineTo(x1,frameY); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x2,topY); ctx.lineTo(x2,frameY+stretchPx); ctx.stroke();
+      HLP.rod(ctx, x1-16, frameY, x1+16, frameY, 10, theme);
+      HLP.rod(ctx, x2-16, frameY+stretchPx, x2+16, frameY+stretchPx, 10, theme);
+      HLP.weight(ctx, x2, frameY+stretchPx+22+massR-11, massR, theme, "M", theme.gold);
+      // spirit level bridging the two frames, tilts with the differential extension
+      var tilt = Math.atan2(stretchPx, x2-x1);
+      ctx.save();
+      ctx.translate((x1+x2)/2, frameY+stretchPx/2);
+      ctx.rotate(tilt);
+      ctx.fillStyle=theme.panel; ctx.strokeStyle=theme.accent; ctx.lineWidth=2;
+      ctx.fillRect(-(x2-x1)/2-10,-6,(x2-x1)+20,12); ctx.strokeRect(-(x2-x1)/2-10,-6,(x2-x1)+20,12);
+      ctx.fillStyle=theme.gold; ctx.beginPath(); ctx.arc(6,0,4,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+      // circular micrometer dial reading off the elongation, on the right
+      var dialCx = W*0.80, dialCy = H*0.48, dialR = mind*0.18;
+      var fullScale = 2.5; // mm, full-scale deflection of the dial
+      var startRad = Math.PI*0.75, sweep = Math.PI*1.5;
+      ctx.beginPath(); ctx.arc(dialCx,dialCy,dialR,0,Math.PI*2);
+      ctx.fillStyle=theme.panel; ctx.fill(); ctx.strokeStyle=theme.ink; ctx.lineWidth=2.2; ctx.stroke();
+      for(var dtk=0; dtk<=4; dtk++){
+        var tf = dtk/4;
+        var ta = startRad + tf*sweep;
+        var ix1 = dialCx+Math.cos(ta)*dialR*0.80, iy1 = dialCy+Math.sin(ta)*dialR*0.80;
+        var ix2 = dialCx+Math.cos(ta)*dialR*0.94, iy2 = dialCy+Math.sin(ta)*dialR*0.94;
+        ctx.strokeStyle=theme.ink; ctx.lineWidth=1.6;
+        ctx.beginPath(); ctx.moveTo(ix1,iy1); ctx.lineTo(ix2,iy2); ctx.stroke();
+        var lx = dialCx+Math.cos(ta)*dialR*0.62, ly = dialCy+Math.sin(ta)*dialR*0.62;
+        HLP.label(ctx, lx, ly+3, (tf*fullScale).toFixed(1), theme, 9, theme.ink, "center");
+      }
+      var frac = Math.min(1, lext_mm/fullScale);
+      var needleA = startRad + frac*sweep;
+      ctx.strokeStyle=theme.accent; ctx.lineWidth=2.6;
+      ctx.beginPath(); ctx.moveTo(dialCx,dialCy); ctx.lineTo(dialCx+Math.cos(needleA)*dialR*0.72, dialCy+Math.sin(needleA)*dialR*0.72); ctx.stroke();
+      ctx.fillStyle=theme.gold; ctx.beginPath(); ctx.arc(dialCx,dialCy,5,0,Math.PI*2); ctx.fill();
+      HLP.label(ctx, dialCx, dialCy+dialR+18, "Elongation", theme, 12, theme.accent, "center");
+      HLP.label(ctx, dialCx, dialCy+dialR+34, lext_mm.toFixed(3)+" mm", theme, 12.5, theme.ink, "center");
+      HLP.label(ctx, W*0.15, H-12, "L = "+vals.L.toFixed(0)+" cm", theme, 11, theme.ink);
+    }
+  },
+  compute:function(vals){
+    var g=981, Y=2.0e12;
+    var rcm = vals.r/10;
+    var lext_cm = (vals.M*g*vals.L)/(Math.PI*rcm*rcm*Y);
+    return {readouts:[{label:"Elongation", value:lext_cm*10, unit:"mm"}], chartY:lext_cm*10};
+  },
+  guideHref:"../docs-mechanics/experiments/searle-apparatus/"
+};
+
+P["panel-static-torsion"] = {
+  navLabel:"8. Static Torsion", kicker:"Elasticity of Solids · Experiment 8",
+  title:"Static Torsion — Rigidity Modulus of a Wire",
+  formula:"&theta; = 2Cl/(&pi;&eta;r&#8308;)",
+  controls:[
+    {key:"F", label:"Applied weight, F", min:50, max:500, step:5, def:250, unit:"g"},
+    {key:"Rarm", label:"Pulley (arm) radius", min:2, max:8, step:0.2, def:5, unit:"cm"},
+    {key:"l", label:"Wire length, l", min:30, max:100, step:1, def:60, unit:"cm"},
+    {key:"r", label:"Wire radius, r", min:1.0, max:2.0, step:0.02, def:1.4, unit:"mm"}
+  ],
+  primaryIndex:0,
+  chartXLabel:"Applied weight, F (g)", chartYLabel:"Twist angle, θ (°)", chartTitle:"Twist Angle vs Applied Weight",
+  chartNote:"A straight line through the origin is expected — its slope (via the couple C = F·R_arm) gives the rigidity modulus.",
+  anim: {
+    height: 230,
+    caption: "The wire twists as the weight pan loads the pulley — watch the pointer sweep round to the final twist angle.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var thetaDeg = out.readouts[0].value;
+      var cx=W*0.4, topY=26, discY=H*0.55, R=Math.min(W,H)*0.2;
+      HLP.hatchSupport(ctx, cx-30, cx+30, topY, theme);
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(cx,topY); ctx.lineTo(cx,discY); ctx.stroke();
+      var ramp = Math.min(1, t/1.4);
+      var theta = thetaDeg*Math.PI/180*ramp;
+      ctx.fillStyle=theme.panel; ctx.strokeStyle=theme.ink; ctx.lineWidth=1.8;
+      ctx.beginPath(); ctx.arc(cx,discY,R,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.save(); ctx.translate(cx,discY); ctx.rotate(theta);
+      ctx.strokeStyle=theme.accent; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(R-4,0); ctx.stroke();
+      ctx.restore();
+      // pulley + weight
+      var pcx = cx+R+50, pcy=discY-30, pr=16;
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=1.8;
+      ctx.beginPath(); ctx.arc(pcx,pcy,pr,0,Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+R,discY); ctx.lineTo(pcx,pcy+pr*0.2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(pcx+pr,pcy); ctx.lineTo(pcx+pr,pcy+70); ctx.stroke();
+      HLP.weight(ctx, pcx+pr, pcy+80, 10, theme, "F", theme.gold);
+      HLP.label(ctx, cx, discY+R+26, "\u03b8 = "+thetaDeg.toFixed(2)+"\u00b0", theme, 13, theme.accent, "center");
+    }
+  },
+  compute:function(vals){
+    var eta=8.0e11, g=981;
+    var rcm = vals.r/10;
+    var C = vals.F*g*vals.Rarm;
+    var theta = (2*C*vals.l)/(Math.PI*eta*Math.pow(rcm,4));
+    var thetaDeg = Math.min(theta*180/Math.PI, 359);
+    return {readouts:[{label:"Twist angle θ", value:thetaDeg, unit:"°"}], chartY: thetaDeg};
+  },
+  guideHref:"../docs-mechanics/experiments/static-torsion/"
+};
+
+})(window.__MECH_PANELS__);
+</script>
+<script>
+window.__MECH_PANELS__ = window.__MECH_PANELS__ || {};
+(function(P){
+
+var LIQUIDS_VISC = [
+  {label:"Water (ρ=1000 kg/m³)", rho:1000, eta:0.010},
+  {label:"Kerosene (ρ=810 kg/m³)", rho:810, eta:0.020},
+  {label:"Glycerine (ρ=1260 kg/m³)", rho:1260, eta:14.9}
+];
+var SPHERE_MAT = [
+  {label:"Steel (ρ=7800 kg/m³)", rho:7800},
+  {label:"Aluminium (ρ=2700 kg/m³)", rho:2700},
+  {label:"Lead (ρ=11340 kg/m³)", rho:11340},
+  {label:"Glass (ρ=2500 kg/m³)", rho:2500}
+];
+var FALL_LIQUIDS = [
+  {label:"Glycerine (ρ=1260 kg/m³, η=14.9 poise)", rho:1260, eta:14.9},
+  {label:"Castor oil (ρ=960 kg/m³, η=9.86 poise)", rho:960, eta:9.86}
+];
+var SURFACE_LIQUIDS = [
+  {label:"Water (ρ=1000, T=72 dyne/cm)", rho:1000, T:72},
+  {label:"Ethanol (ρ=789, T=22 dyne/cm)", rho:789, T:22},
+  {label:"Kerosene (ρ=810, T=28 dyne/cm)", rho:810, T:28}
+];
+var ULTRASONIC_LIQUIDS = [
+  {label:"Water (v=1480 m/s, ρ=1000)", v:1480, rho:1000},
+  {label:"Glycerine (v=1920 m/s, ρ=1260)", v:1920, rho:1260},
+  {label:"Kerosene (v=1320 m/s, ρ=810)", v:1320, rho:810}
+];
+
+P["panel-poiseuille"] = {
+  navLabel:"9. Poiseuille's Method", kicker:"Fluid Properties · Experiment 9",
+  title:"Poiseuille's Method — Coefficient of Viscosity",
+  formula:"&eta; = &pi;Pr&#8308;t/(8Vl), &nbsp; P=&rho;gh",
+  controls:[
+    {key:"h", label:"Pressure head, h", min:5, max:40, step:1, def:20, unit:"cm"},
+    {key:"r", label:"Capillary radius, r", min:0.2, max:0.6, step:0.01, def:0.35, unit:"mm"},
+    {key:"l", label:"Capillary length, l", min:5, max:20, step:0.5, def:10, unit:"cm"},
+    {key:"liq", label:"Liquid", type:"select", options:LIQUIDS_VISC.map(function(x,i){return {value:i, label:x.label};}), defaultIndex:0}
+  ],
+  primaryIndex:0,
+  chartXLabel:"Pressure head, h (cm)", chartYLabel:"1/t (s⁻¹)", chartTitle:"1/t vs Pressure Head",
+  chartNote:"A straight line through the origin is expected: 1/t ∝ h.",
+  anim: {
+    height: 230,
+    caption: "Liquid drives down through the narrow capillary under the pressure head and collects, drop by drop, in the measuring cylinder below.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var tsec = out.readouts[0].value;
+      var resX=W*0.3, resTop=20, resBot=20+vals.h*2.2, resW=70;
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=1.8; ctx.fillStyle=theme.panel;
+      ctx.fillRect(resX-resW/2,resTop,resW,resBot-resTop); ctx.strokeRect(resX-resW/2,resTop,resW,resBot-resTop);
+      ctx.fillStyle=theme.accent; ctx.globalAlpha=0.55;
+      ctx.fillRect(resX-resW/2+3,resTop+3,resW-6,resBot-resTop-6); ctx.globalAlpha=1;
+      var capY1=resBot, capY2=Math.min(H-72, capY1 + 18 + vals.l*2.2);
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(resX,capY1); ctx.lineTo(resX,capY2); ctx.stroke();
+      // falling drop, period scaled with tsec (faster drop cycle = higher flow rate)
+      var dropPeriod = Math.max(0.25, Math.min(2.2, tsec/60));
+      var phase = (t % dropPeriod)/dropPeriod;
+      var dropY = capY2 + phase*40;
+      ctx.fillStyle=theme.accent;
+      ctx.beginPath(); ctx.arc(resX,dropY,4,0,Math.PI*2); ctx.fill();
+      // collection vessel, level rises slowly and resets
+      var vesX=resX, vesTop=capY2+44, vesBot=H-14, vesW=54;
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=1.8; ctx.fillStyle='transparent';
+      ctx.strokeRect(vesX-vesW/2,vesTop,vesW,vesBot-vesTop);
+      var fillFrac = ((t/ (dropPeriod*14)) % 1);
+      ctx.fillStyle=theme.accent; ctx.globalAlpha=0.5;
+      ctx.fillRect(vesX-vesW/2+2, vesTop+(vesBot-vesTop)*(1-fillFrac), vesW-4, (vesBot-vesTop)*fillFrac);
+      ctx.globalAlpha=1;
+      HLP.label(ctx, W*0.62, 40, "Head h = "+vals.h.toFixed(1)+" cm", theme, 12.5, theme.ink);
+      HLP.label(ctx, W*0.62, 60, "Time for 10 cm\u00b3 = "+tsec.toFixed(1)+" s", theme, 12.5, theme.accent);
+      HLP.label(ctx, W*0.62, 80, "Capillary l = "+vals.l.toFixed(1)+" cm", theme, 11.5, theme.ink);
+    }
+  },
+  compute:function(vals){
+    var liq = LIQUIDS_VISC[Math.round(vals.liq)] || LIQUIDS_VISC[0];
+    var g=981, V=10;
+    var rho_cgs = liq.rho/1000;
+    var P = rho_cgs*g*vals.h;
+    var rcm = vals.r/10;
+    var t = (8*liq.eta*vals.l*V)/(Math.PI*P*Math.pow(rcm,4));
+    return {readouts:[{label:"Time to collect 10 cm³", value:t, unit:"s"},{label:"Liquid viscosity η", value:liq.eta, unit:"poise"}], chartY: 1/t};
+  },
+  guideHref:"../docs-mechanics/experiments/poiseuille-viscosity/"
+};
+
+P["panel-stokes"] = {
+  navLabel:"10. Stokes' Method", kicker:"Fluid Properties · Experiment 10",
+  title:"Stokes' Method — Viscosity by Terminal Velocity",
+  formula:"v = (2/9) r&sup2;g(&rho;&minus;&sigma;)/&eta;",
+  controls:[
+    {key:"r", label:"Sphere radius, r", min:0.5, max:3.0, step:0.05, def:1.5, unit:"mm"},
+    {key:"mat", label:"Sphere material", type:"select", options:SPHERE_MAT.map(function(x,i){return {value:i, label:x.label};}), defaultIndex:0},
+    {key:"liq", label:"Liquid", type:"select", options:FALL_LIQUIDS.map(function(x,i){return {value:i, label:x.label};}), defaultIndex:0}
+  ],
+  primaryIndex:0,
+  chartXLabel:"Sphere radius, r (mm)", chartYLabel:"Terminal velocity, v (cm/s)", chartTitle:"Terminal Velocity vs Radius",
+  chartNote:"v ∝ r² — the curve should bend upward; plotting v against r² (as in your lab record) straightens it into a line through the origin.",
+  anim: {
+    height: 230,
+    caption: "The sphere falls at a steady terminal velocity once drag and buoyancy balance its weight — timed between the two marked rings.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var v = out.readouts[0].value;
+      var jarX1=W*0.32, jarX2=W*0.68, jarTop=16, jarBot=H-16;
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(jarX1,jarTop); ctx.lineTo(jarX1,jarBot); ctx.lineTo(jarX2,jarBot); ctx.lineTo(jarX2,jarTop); ctx.stroke();
+      ctx.fillStyle=theme.accent; ctx.globalAlpha=0.28;
+      ctx.fillRect(jarX1,jarTop,jarX2-jarX1,jarBot-jarTop); ctx.globalAlpha=1;
+      var ring1=jarTop+H*0.28, ring2=jarBot-H*0.16;
+      ctx.strokeStyle=theme.gold; ctx.lineWidth=1.6; ctx.setLineDash([5,4]);
+      ctx.beginPath(); ctx.moveTo(jarX1,ring1); ctx.lineTo(jarX2,ring1); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(jarX1,ring2); ctx.lineTo(jarX2,ring2); ctx.stroke();
+      ctx.setLineDash([]);
+      var speedPx = Math.max(6, Math.min(70, v*14));
+      var cycle = (jarBot-jarTop+30)/speedPx;
+      var yy = jarTop-10 + ((t/cycle*speedPx*cycle) % (jarBot-jarTop+30));
+      var sphereR = 4 + (vals.r-0.5)/(3.0-0.5)*14;
+      HLP.weight(ctx, (jarX1+jarX2)/2, yy, sphereR, theme, null, theme.ink);
+      HLP.label(ctx, W/2, H-4, "Terminal velocity v = "+v.toFixed(3)+" cm/s   (r = "+vals.r.toFixed(2)+" mm)", theme, 12.5, theme.accent, "center");
+    }
+  },
+  compute:function(vals){
+    var mat = SPHERE_MAT[Math.round(vals.mat)] || SPHERE_MAT[0];
+    var liq = FALL_LIQUIDS[Math.round(vals.liq)] || FALL_LIQUIDS[0];
+    var g=981;
+    var rcm = vals.r/10;
+    var rho_s = mat.rho/1000, rho_l = liq.rho/1000;
+    var v = (2/9)*rcm*rcm*g*(rho_s-rho_l)/liq.eta;
+    return {readouts:[{label:"Terminal velocity v", value:v, unit:"cm/s"}], chartY: v};
+  },
+  guideHref:"../docs-mechanics/experiments/stokes-viscosity/"
+};
+
+P["panel-capillary-rise"] = {
+  navLabel:"11. Capillary Rise", kicker:"Fluid Properties · Experiment 11",
+  title:"Capillary Rise Method — Surface Tension",
+  formula:"h = 2T/(r&rho;g)",
+  controls:[
+    {key:"r", label:"Capillary radius, r", min:0.1, max:1.0, step:0.02, def:0.3, unit:"mm"},
+    {key:"liq", label:"Liquid", type:"select", options:SURFACE_LIQUIDS.map(function(x,i){return {value:i, label:x.label};}), defaultIndex:0}
+  ],
+  primaryIndex:0,
+  chartXLabel:"Capillary radius, r (mm)", chartYLabel:"Rise height, h (cm)", chartTitle:"Rise Height vs Radius",
+  chartNote:"h ∝ 1/r — plotting h against 1/r (as in your lab record) gives a line through the origin.",
+  anim: {
+    height: 220,
+    caption: "Watch the liquid climb the fine capillary and settle at its equilibrium rise height — narrower tubes give a taller rise.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var h_cm = out.readouts[0].value;
+      var beakerX1=W*0.2, beakerX2=W*0.8, beakerTop=H*0.55, beakerBot=H-14;
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(beakerX1,beakerTop); ctx.lineTo(beakerX1,beakerBot); ctx.lineTo(beakerX2,beakerBot); ctx.lineTo(beakerX2,beakerTop); ctx.stroke();
+      ctx.fillStyle=theme.accent; ctx.globalAlpha=0.3;
+      ctx.fillRect(beakerX1,beakerTop+8,beakerX2-beakerX1,beakerBot-beakerTop-8); ctx.globalAlpha=1;
+      var tubeX = (beakerX1+beakerX2)/2, tubeTop=20, tubeBot=beakerTop+8;
+      var tubeW = 4 + (vals.r-0.1)/(1.0-0.1)*14;
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=1.8;
+      ctx.beginPath(); ctx.moveTo(tubeX-tubeW/2,tubeTop); ctx.lineTo(tubeX-tubeW/2,tubeBot); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(tubeX+tubeW/2,tubeTop); ctx.lineTo(tubeX+tubeW/2,tubeBot); ctx.stroke();
+      var ramp = Math.min(1, t/1.2);
+      var riseTop = tubeBot - Math.min(tubeBot-30, h_cm*10)*ramp;
+      ctx.fillStyle=theme.accent; ctx.globalAlpha=0.55;
+      ctx.fillRect(tubeX-tubeW/2+1, riseTop, tubeW-2, tubeBot-riseTop); ctx.globalAlpha=1;
+      ctx.strokeStyle=theme.accent; ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.moveTo(tubeX-tubeW/2+1,riseTop); ctx.quadraticCurveTo(tubeX,riseTop+3,tubeX+tubeW/2-1,riseTop); ctx.stroke();
+      HLP.label(ctx, W/2, H-4, "Rise height h = "+h_cm.toFixed(2)+" cm", theme, 12.5, theme.accent, "center");
+    }
+  },
+  compute:function(vals){
+    var liq = SURFACE_LIQUIDS[Math.round(vals.liq)] || SURFACE_LIQUIDS[0];
+    var g=981;
+    var rcm = vals.r/10;
+    var rho_cgs = liq.rho/1000;
+    var h = (2*liq.T)/(rcm*rho_cgs*g);
+    return {readouts:[{label:"Rise height h", value:h, unit:"cm"}], chartY:h};
+  },
+  guideHref:"../docs-mechanics/experiments/capillary-rise/"
+};
+
+P["panel-coupled-pendulums"] = {
+  navLabel:"12. Coupled Pendulums", kicker:"Oscillations & Acoustics (PG) · Experiment 12",
+  title:"Coupled Pendulums — Normal Modes &amp; Beats",
+  formula:"f_s=(1/2&pi;)&radic;(g/l) &nbsp; f_a=(1/2&pi;)&radic;(g/l+2k/m) &nbsp; T_beat=1/(f_a&minus;f_s)",
+  controls:[
+    {key:"l", label:"Pendulum length, l", min:20, max:100, step:1, def:60, unit:"cm"},
+    {key:"k", label:"Coupling constant, k", min:0.5, max:5.0, step:0.1, def:2.0, unit:"N/m"},
+    {key:"m", label:"Bob mass (each), m", min:50, max:300, step:5, def:150, unit:"g"}
+  ],
+  primaryIndex:1,
+  chartXLabel:"Coupling constant, k (N/m)", chartYLabel:"Beat period (s)", chartTitle:"Beat Period vs Coupling",
+  chartNote:"Stronger coupling transfers energy between the pendulums faster, shortening the beat period.",
+  anim: {
+    height: 240,
+    caption: "Displace just the left pendulum and watch the energy beat back and forth into the right one \u2014 a true normal-mode superposition, not a canned animation.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var fs = out.readouts[0].value, fa = out.readouts[1].value;
+      var thetaMax = 20*Math.PI/180;
+      var a1 = thetaMax*0.5*(Math.cos(2*Math.PI*fs*t)+Math.cos(2*Math.PI*fa*t));
+      var a2 = thetaMax*0.5*(Math.cos(2*Math.PI*fs*t)-Math.cos(2*Math.PI*fa*t));
+      var topY=24;
+      var lenBase = Math.min(H*0.68, 190);
+      var len = Math.min(H*0.78, vals.l*(lenBase/60));
+      var bobR = 6 + (vals.m-50)/(300-50)*14;
+      var x1=W*0.32, x2=W*0.68;
+      HLP.hatchSupport(ctx, x1-30, x2+30, topY, theme);
+      function pend(px,angle){
+        var bx = px+len*Math.sin(angle), by=topY+len*Math.cos(angle);
+        ctx.strokeStyle=theme.ink; ctx.lineWidth=1.6;
+        ctx.beginPath(); ctx.moveTo(px,topY); ctx.lineTo(bx,by); ctx.stroke();
+        HLP.weight(ctx,bx,by,bobR,theme,null,theme.gold);
+        return [bx,by];
+      }
+      var b1 = pend(x1,a1), b2 = pend(x2,a2);
+      var springY = topY+len*0.55;
+      HLP.spring(ctx, x1+(springY-topY)*Math.tan(a1), springY, x2+(springY-topY)*Math.tan(a2), springY, 6, 6, theme);
+      HLP.label(ctx, W/2, H-8, "f_s="+fs.toFixed(2)+"Hz  f_a="+fa.toFixed(2)+"Hz", theme, 12, theme.accent, "center");
+    }
+  },
+  compute:function(vals){
+    var g=9.8, l_m=vals.l/100, m_kg=vals.m/1000;
+    var fs = (1/(2*Math.PI))*Math.sqrt(g/l_m);
+    var fa = (1/(2*Math.PI))*Math.sqrt(g/l_m + 2*vals.k/m_kg);
+    var Tbeat = 1/(fa-fs);
+    return {readouts:[{label:"Symmetric mode f_s", value:fs, unit:"Hz"},{label:"Antisymmetric mode f_a", value:fa, unit:"Hz"},{label:"Beat period", value:Tbeat, unit:"s"}], chartY:Tbeat};
+  },
+  guideHref:"../docs-mechanics/experiments/coupled-pendulums/"
+};
+
+P["panel-damped-oscillations"] = {
+  navLabel:"13. Damped Oscillations", kicker:"Oscillations & Acoustics (PG) · Experiment 13",
+  title:"Damped Oscillations — Logarithmic Decrement &amp; Q",
+  formula:"&delta;=&gamma;T=ln(A_n/A_(n+1)), &nbsp; Q&asymp;&pi;/&delta;",
+  controls:[
+    {key:"b", label:"Damping coefficient, b", min:0.05, max:1.00, step:0.01, def:0.3, unit:"kg/s"},
+    {key:"m", label:"Oscillating mass, m", min:50, max:300, step:5, def:150, unit:"g"},
+    {key:"k", label:"Spring constant, k", min:5, max:40, step:1, def:20, unit:"N/m"}
+  ],
+  primaryIndex:0,
+  chartXLabel:"Damping coefficient, b (kg/s)", chartYLabel:"Logarithmic decrement, δ", chartTitle:"δ vs Damping Coefficient",
+  chartNote:"δ increases roughly linearly with b, while the quality factor Q = π/δ falls correspondingly.",
+  anim: {
+    height: 220,
+    caption: "The mass-spring oscillator rings down exponentially \u2014 stronger damping (higher b) flattens the envelope faster.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var m_kg = vals.m/1000;
+      var omega0 = Math.sqrt(vals.k/m_kg);
+      var gamma = vals.b/(2*m_kg);
+      var omegad = Math.sqrt(Math.max(omega0*omega0-gamma*gamma,1e-6));
+      var resetPeriod = Math.max(2.5, 5/Math.max(gamma,0.05));
+      var tt = t % resetPeriod;
+      var A0 = Math.min(H*0.32, 60);
+      var y = A0*Math.exp(-gamma*tt)*Math.cos(omegad*tt);
+      var cx=W/2, ceilingY=20, restY=H*0.45;
+      var massR = 10 + (vals.m-50)/(300-50)*14;
+      HLP.hatchSupport(ctx, cx-50, cx+50, ceilingY, theme);
+      HLP.spring(ctx, cx, ceilingY, cx, restY+y, 8, 12, theme);
+      HLP.weight(ctx, cx, restY+y, massR, theme, "m", theme.gold);
+      HLP.dashpot(ctx, cx+55, ceilingY+10, cx+55, restY+y, theme);
+      ctx.strokeStyle=theme.grid; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+      ctx.beginPath(); ctx.moveTo(cx-70,restY); ctx.lineTo(cx+90,restY); ctx.stroke(); ctx.setLineDash([]);
+      HLP.label(ctx, W*0.62, H-14, "\u03b3="+gamma.toFixed(2)+"/s  \u03c9_d="+omegad.toFixed(2)+" rad/s", theme, 12, theme.accent);
+    }
+  },
+  compute:function(vals){
+    var m_kg=vals.m/1000;
+    var omega0 = Math.sqrt(vals.k/m_kg);
+    var gamma = vals.b/(2*m_kg);
+    var omegad2 = Math.max(omega0*omega0 - gamma*gamma, 1e-6);
+    var omegad = Math.sqrt(omegad2);
+    var T = 2*Math.PI/omegad;
+    var delta = gamma*T;
+    var Q = Math.PI/delta;
+    return {readouts:[{label:"Logarithmic decrement δ", value:delta, unit:""},{label:"Quality factor Q", value:Q, unit:""}], chartY:delta};
+  },
+  guideHref:"../docs-mechanics/experiments/damped-oscillations/"
+};
+
+P["panel-forced-resonance"] = {
+  navLabel:"14. Forced Oscillations & Resonance", kicker:"Oscillations & Acoustics (PG) · Experiment 14",
+  title:"Forced Oscillations &amp; Resonance — Barton's Pendulums",
+  formula:"A(&omega;) = (F&#8320;/m) / &radic;[(&omega;&#8320;&sup2;&minus;&omega;&sup2;)&sup2; + (2&gamma;&omega;)&sup2;]",
+  controls:[
+    {key:"fdrive", label:"Driving frequency", min:0.2, max:3.0, step:0.02, def:1.0, unit:"Hz"},
+    {key:"gamma", label:"Damping, γ", min:0.05, max:1.00, step:0.01, def:0.2, unit:"s⁻¹"},
+    {key:"f0", label:"Natural frequency, f0", min:0.5, max:2.0, step:0.02, def:1.0, unit:"Hz"}
+  ],
+  primaryIndex:0,
+  chartXLabel:"Driving frequency (Hz)", chartYLabel:"Amplitude (arb. units)", chartTitle:"Resonance Curve",
+  chartNote:"The curve peaks sharply near f_drive = f0 for light damping (small γ), and is broad and low for heavy damping.",
+  anim: {
+    height: 230,
+    caption: "The Barton's-style driven pendulum settles into steady oscillation at the driving frequency, with the amplitude and phase lag your sliders predict.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var A = out.readouts[0].value, phiDeg = out.readouts[1].value;
+      var phi = phiDeg*Math.PI/180;
+      var driveAmp = 14;
+      var topY=24, cx=W/2, len=Math.min(H*0.55,150);
+      HLP.hatchSupport(ctx, cx-70, cx+70, topY-6, theme);
+      var driveX = cx + driveAmp*Math.cos(2*Math.PI*vals.fdrive*t);
+      ctx.fillStyle=theme.gold; ctx.beginPath(); ctx.arc(driveX,topY,6,0,Math.PI*2); ctx.fill();
+      var Ascaled = Math.min(60, A*40);
+      var swingAngle = (Ascaled/len)*Math.cos(2*Math.PI*vals.fdrive*t - phi);
+      var bx = cx+len*Math.sin(swingAngle), by = topY+40+len*Math.cos(swingAngle);
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=1.6;
+      ctx.beginPath(); ctx.moveTo(driveX,topY); ctx.lineTo(cx,topY+40); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx,topY+40); ctx.lineTo(bx,by); ctx.stroke();
+      HLP.weight(ctx,bx,by,13,theme,null,theme.gold);
+      HLP.label(ctx, W/2, H-10, "A="+A.toFixed(3)+"  \u03c6="+phiDeg.toFixed(0)+"\u00b0", theme, 12.5, theme.accent, "center");
+    }
+  },
+  compute:function(vals){
+    var omega = 2*Math.PI*vals.fdrive, omega0 = 2*Math.PI*vals.f0;
+    var denom = Math.sqrt(Math.pow(omega0*omega0-omega*omega,2) + Math.pow(2*vals.gamma*omega,2));
+    var A = 1/denom;
+    var phi = Math.atan2(2*vals.gamma*omega, omega0*omega0-omega*omega)*180/Math.PI;
+    if(phi<0) phi += 180;
+    return {readouts:[{label:"Steady-state amplitude", value:A, unit:"(arb.)"},{label:"Phase lag φ", value:phi, unit:"°"}], chartY:A};
+  },
+  guideHref:"../docs-mechanics/experiments/forced-oscillations-resonance/"
+};
+
+P["panel-ultrasonic"] = {
+  navLabel:"15. Ultrasonic Interferometer", kicker:"Oscillations & Acoustics (PG) · Experiment 15",
+  title:"Ultrasonic Interferometer — Velocity of Sound (PG)",
+  formula:"&lambda;=2&Delta;d, &nbsp; v=f&lambda;, &nbsp; &beta;=1/(&rho;v&sup2;), &nbsp; K=&rho;v&sup2;",
+  controls:[
+    {key:"f", label:"Driving frequency", min:1.0, max:4.0, step:0.1, def:2.0, unit:"MHz"},
+    {key:"liq", label:"Liquid", type:"select", options:ULTRASONIC_LIQUIDS.map(function(x,i){return {value:i, label:x.label};}), defaultIndex:0}
+  ],
+  primaryIndex:0,
+  chartXLabel:"Driving frequency (MHz)", chartYLabel:"Maxima spacing, Δd (mm)", chartTitle:"Maxima Spacing vs Frequency",
+  chartNote:"Since v = fλ = f·(2Δd) is fixed by the liquid, Δd falls as the frequency rises.",
+  anim: {
+    height: 230,
+    caption: "A standing wave forms in the liquid column between the crystal and the movable reflector; the current meter peaks each time the reflector passes a resonance.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var dd_mm = out.readouts[0].value;
+      var colX1=W*0.34, colX2=W*0.66, colBot=H-30, colTopMax=30;
+      var travel = Math.min(colBot-colTopMax-20, dd_mm*3*6);
+      var reflY = colBot-20-((t*14)% (travel+40));
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(colX1,colBot); ctx.lineTo(colX1,reflY); ctx.lineTo(colX2,reflY); ctx.lineTo(colX2,colBot); ctx.stroke();
+      ctx.fillStyle=theme.accent; ctx.globalAlpha=0.3;
+      ctx.fillRect(colX1,reflY,colX2-colX1,colBot-reflY); ctx.globalAlpha=1;
+      ctx.fillStyle=theme.panel; ctx.strokeStyle=theme.ink; ctx.lineWidth=1.6;
+      ctx.fillRect(colX1-4,colBot,colX2-colX1+8,14); ctx.strokeRect(colX1-4,colBot,colX2-colX1+8,14);
+      ctx.fillRect(colX1-6,reflY-6,colX2-colX1+12,8); ctx.strokeRect(colX1-6,reflY-6,colX2-colX1+12,8);
+      var n=40, lam=Math.max(10,dd_mm*6);
+      ctx.strokeStyle=theme.accent; ctx.lineWidth=1.6;
+      ctx.beginPath();
+      for(var i=0;i<=n;i++){
+        var f=i/n, y=reflY+(colBot-reflY)*f;
+        var amp = 10*Math.sin(2*Math.PI*(colBot-y)/lam);
+        var x = (colX1+colX2)/2+amp;
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+      var meterX=W*0.82, meterY=60, meterR=26;
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(meterX,meterY,meterR,0,Math.PI*2); ctx.stroke();
+      var needle = 0.6+0.4*Math.sin(2*Math.PI*(colBot-reflY)/lam);
+      var na = -Math.PI*0.75 + needle*Math.PI*1.5;
+      ctx.strokeStyle=theme.gold; ctx.lineWidth=2.4;
+      ctx.beginPath(); ctx.moveTo(meterX,meterY); ctx.lineTo(meterX+meterR*0.85*Math.cos(na), meterY+meterR*0.85*Math.sin(na)); ctx.stroke();
+      HLP.label(ctx, meterX, meterY+meterR+16, "current", theme, 10.5, theme.ink, "center");
+      HLP.label(ctx, W*0.25, H-8, "\u0394d = "+dd_mm.toFixed(3)+" mm", theme, 12.5, theme.accent);
+    }
+  },
+  compute:function(vals){
+    var liq = ULTRASONIC_LIQUIDS[Math.round(vals.liq)] || ULTRASONIC_LIQUIDS[0];
+    var lambda_m = liq.v/(vals.f*1e6);
+    var dd_mm = (lambda_m/2)*1000;
+    var beta = 1/(liq.rho*liq.v*liq.v);
+    var K = liq.rho*liq.v*liq.v;
+    return {readouts:[{label:"Maxima spacing Δd", value:dd_mm, unit:"mm"},{label:"Velocity v", value:liq.v, unit:"m/s"},{label:"Bulk modulus K", value:K, unit:"N/m²"}], chartY: dd_mm};
+  },
+  guideHref:"../docs-mechanics/experiments/ultrasonic-interferometer/"
+};
+
+P["panel-ballistic-pendulum"] = {
+  navLabel:"16. Ballistic Pendulum", kicker:"Practical Applications · Experiment 16",
+  title:"Ballistic Pendulum — Measuring an Unknown Launch Speed",
+  formula:"v = (M+m)/m &times; &radic;(2gh),  &nbsp; 1&minus;cos&theta; = m&sup2;v&sup2;/[2gL(M+m)&sup2;]",
+  controls:[
+    {key:"v", label:"Launch speed, v", min:2, max:8, step:0.1, def:5, unit:"m/s"},
+    {key:"m", label:"Ball (projectile) mass, m", min:5, max:50, step:1, def:20, unit:"g"},
+    {key:"M", label:"Pendulum block mass, M", min:200, max:1000, step:10, def:500, unit:"g"},
+    {key:"L", label:"Pendulum length, L", min:20, max:60, step:1, def:40, unit:"cm"}
+  ],
+  primaryIndex:1,
+  chartXLabel:"Ball mass, m (g)", chartYLabel:"Rise height, h (cm)", chartTitle:"Rise Height vs Ball Mass",
+  chartNote:"A heavier ball carries more momentum at the same launch speed, so it swings the block-plus-ball combination higher.",
+  anim:{
+    height:250,
+    caption:"The ball embeds in the suspended block (perfectly inelastic collision); the combined mass then swings up like a pendulum, converting its kinetic energy into height gained.",
+    draw:function(ctx,W,H,vals,out,t,theme){
+      var HLP=window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var thetaMaxDeg=out.readouts[0].value, thetaMax=thetaMaxDeg*Math.PI/180;
+      var pivotX=W*0.5, pivotY=30;
+      var Lpx=Math.min(H,W)*0.5*(vals.L/40);
+      Lpx = Math.min(Lpx, H-pivotY-40);
+      var blockR = 10 + (vals.M-200)/(1000-200)*14;
+      var ballR = 3 + (vals.m-5)/(50-5)*7;
+      var cycle=2.4;
+      var tt=t%cycle;
+      var flightFrac=0.35;
+      HLP.hatchSupport(ctx,pivotX-40,pivotX+40,pivotY-10,theme);
+      var theta;
+      if(tt<flightFrac){
+        theta=0;
+        var bx = 20 + (pivotX-40-20)*(tt/flightFrac);
+        var by = pivotY+Lpx;
+        ctx.strokeStyle=theme.ink; ctx.lineWidth=1.6;
+        ctx.beginPath(); ctx.moveTo(pivotX,pivotY); ctx.lineTo(pivotX,by); ctx.stroke();
+        HLP.weight(ctx,pivotX,by,blockR,theme,"M",theme.panel);
+        HLP.weight(ctx,bx,by,ballR,theme,null,theme.gold);
+      } else {
+        var swingT=tt-flightFrac;
+        var swingCycle=cycle-flightFrac;
+        theta=thetaMax*Math.abs(Math.sin(Math.PI*swingT/swingCycle));
+        var bx2=pivotX+Lpx*Math.sin(theta), by2=pivotY+Lpx*Math.cos(theta);
+        ctx.strokeStyle=theme.ink; ctx.lineWidth=1.6;
+        ctx.beginPath(); ctx.moveTo(pivotX,pivotY); ctx.lineTo(bx2,by2); ctx.stroke();
+        HLP.weight(ctx,bx2,by2,blockR+2,theme,"M+m",theme.gold);
+      }
+      HLP.label(ctx, W*0.5, H-14, "\u03b8max = "+thetaMaxDeg.toFixed(1)+"\u00b0   h = "+out.readouts[1].value.toFixed(2)+" cm", theme, 12.5, theme.accent, "center");
+    }
+  },
+  compute:function(vals){
+    var g=981;
+    var vcm=vals.v*100;
+    var num=vals.m*vals.m*vcm*vcm;
+    var den=2*g*vals.L*Math.pow(vals.M+vals.m,2);
+    var oneMinusCos=Math.min(num/den,1.999);
+    var theta=Math.acos(1-oneMinusCos);
+    var h=vals.L*(1-Math.cos(theta));
+    var vCalc=((vals.M+vals.m)/vals.m)*Math.sqrt(2*g*h)/100;
+    return {readouts:[{label:"Swing angle, \u03b8max", value:theta*180/Math.PI, unit:"\u00b0"},{label:"Rise height, h", value:h, unit:"cm"},{label:"Reconstructed v (check)", value:vCalc, unit:"m/s"}], chartY:h};
+  },
+  guideHref:"../docs-mechanics/experiments/ballistic-pendulum/"
+};
+
+P["panel-rolling-race"] = {
+  navLabel:"17. Rolling Race on Incline", kicker:"Practical Applications · Experiment 17",
+  title:"Rolling Race on an Incline — Moment of Inertia and Rolling Efficiency",
+  formula:"a = g sin&theta; / (1+k),  &nbsp; I = k m r&sup2;,  &nbsp; v = &radic;(2gh/(1+k))",
+  controls:[
+    {key:"k", label:"Shape (moment-of-inertia factor k)", type:"select",
+      options:[{value:1,label:"Ring / hoop  (I = m r\u00b2, k=1)"},
+               {value:0.5,label:"Solid disc / cylinder  (I = \u00bd m r\u00b2, k=0.5)"},
+               {value:0.4,label:"Solid sphere  (I = \u2075\u2044\u2082 m r\u00b2, k=0.4)"},
+               {value:0.6667,label:"Hollow sphere  (I = \u2073\u2044\u2083 m r\u00b2, k=0.667)"}],
+      defaultIndex:1},
+    {key:"theta", label:"Incline angle, \u03b8", min:10, max:40, step:1, def:20, unit:"\u00b0"},
+    {key:"L", label:"Incline length (along slope), L", min:50, max:200, step:5, def:100, unit:"cm"}
+  ],
+  primaryIndex:1,
+  chartXLabel:"Incline angle, \u03b8 (\u00b0)", chartYLabel:"Time to reach bottom, t (s)", chartTitle:"Time vs Incline Angle",
+  chartNote:"Steeper inclines shorten the descent time for every shape, but a hoop (all mass at the rim) always trails a solid disc or sphere released from the same height.",
+  anim:{
+    height:240,
+    caption:"Objects with more of their mass concentrated at the rim (larger k) convert a larger share of their lost potential energy into spin rather than forward motion, so they accelerate down the slope more slowly — exactly why a solid ball beats a hoop in a real rolling race.",
+    draw:function(ctx,W,H,vals,out,t,theme){
+      var HLP=window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var rad=vals.theta*Math.PI/180;
+      var mind = Math.min(W,H);
+      var pxPerCm = mind*0.55/200;
+      var Lpx = vals.L*pxPerCm;
+      var topX=W*0.12, baseY=H*0.86;
+      var runX = Math.min(W*0.90, topX + Lpx*Math.cos(rad));
+      var topY = Math.max(H*0.10, baseY - Lpx*Math.sin(rad));
+      var rampLen=Math.sqrt(Math.pow(runX-topX,2)+Math.pow(baseY-topY,2));
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=2.4;
+      ctx.beginPath(); ctx.moveTo(topX,topY); ctx.lineTo(topX,baseY); ctx.lineTo(runX,baseY); ctx.closePath(); ctx.stroke();
+      ctx.fillStyle=theme.panel; ctx.globalAlpha=0.5;
+      ctx.beginPath(); ctx.moveTo(topX,topY); ctx.lineTo(topX,baseY); ctx.lineTo(runX,baseY); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha=1;
+      var tAccel=out.readouts[1].value;
+      var cycle=tAccel+0.6;
+      var tt=t%cycle;
+      var frac = tt<tAccel ? Math.pow(tt/tAccel,2) : 1;
+      var R=18;
+      var cx = topX + (runX-topX)*frac;
+      var cy = topY + (baseY-topY)*frac - R;
+      ctx.save(); ctx.translate(cx,cy);
+      var dist = frac*rampLen;
+      var spin = dist/(R/1) * (tt<tAccel?1:1);
+      ctx.rotate(spin*0.09);
+      ctx.fillStyle=theme.panel; ctx.strokeStyle=theme.ink; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(0,0,R,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle=theme.accent; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(R,0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-R); ctx.stroke();
+      ctx.restore();
+      HLP.label(ctx, W*0.5, H-8, "t = "+tAccel.toFixed(2)+" s to reach the bottom", theme, 12.5, theme.accent, "center");
+    }
+  },
+  compute:function(vals){
+    var g=981;
+    var rad=vals.theta*Math.PI/180;
+    var a=g*Math.sin(rad)/(1+vals.k);
+    var t=Math.sqrt(2*vals.L/a);
+    var v=a*t;
+    return {readouts:[{label:"Acceleration, a", value:a, unit:"cm/s\u00b2"},{label:"Time to bottom, t", value:t, unit:"s"},{label:"Speed at bottom, v", value:v, unit:"cm/s"}], chartY:t};
+  },
+  guideHref:"../docs-mechanics/experiments/rolling-race-incline/"
+};
+
+P["panel-gyroscope"] = {
+  navLabel:"18. Gyroscopic Precession", kicker:"Practical Applications · Experiment 18",
+  title:"Gyroscopic Precession — Spin, Torque and Steady Precession",
+  formula:"L = I&omega;,  &nbsp; &tau; = Mgd,  &nbsp; &Omega; = &tau;/L = 2gd/(r&sup2;&omega;)",
+  controls:[
+    {key:"Mw", label:"Wheel mass, M", min:100, max:500, step:10, def:250, unit:"g"},
+    {key:"Rw", label:"Wheel radius, r", min:3, max:8, step:0.2, def:5, unit:"cm"},
+    {key:"omega", label:"Spin rate, \u03c9", min:5, max:60, step:1, def:25, unit:"rad/s"},
+    {key:"d", label:"C.G. offset from pivot, d", min:2, max:10, step:0.2, def:6, unit:"cm"}
+  ],
+  primaryIndex:2,
+  chartXLabel:"Spin rate, \u03c9 (rad/s)", chartYLabel:"Precession rate, \u03a9 (rad/s)", chartTitle:"Precession Rate vs Spin Rate",
+  chartNote:"Precession rate is inversely proportional to spin rate — spin the wheel faster and it precesses more slowly and steadily, exactly as a fast-spinning top wobbles less than a slow one.",
+  anim:{
+    height:260,
+    caption:"Top view: the disc spins rapidly about its own axle (the short radial spokes), while the whole axle itself slowly sweeps around the vertical pivot — this slow sweep is precession, driven by the torque of the offset weight.",
+    draw:function(ctx,W,H,vals,out,t,theme){
+      var HLP=window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var Omega=out.readouts[1].value;
+      var mind=Math.min(W,H);
+      var cx=W/2, cy=H/2;
+      var armR=mind*(0.14+(vals.d-2)/(10-2)*0.18);
+      var discR=12+(vals.Rw-3)/(8-3)*24;
+      var precAngle = Omega*t*0.35;
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(cx,cy,armR,0,Math.PI*2); ctx.setLineDash([3,4]); ctx.stroke(); ctx.setLineDash([]);
+      HLP.weight(ctx,cx,cy,6,theme,null,theme.ink);
+      var ax=cx+armR*Math.cos(precAngle), ay=cy+armR*Math.sin(precAngle);
+      ctx.strokeStyle=theme.gold; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(ax,ay); ctx.stroke();
+      ctx.save(); ctx.translate(ax,ay);
+      var spinAngle = vals.omega*t*3;
+      ctx.rotate(spinAngle);
+      ctx.fillStyle=theme.panel; ctx.strokeStyle=theme.ink; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(0,0,discR,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      for(var k=0;k<6;k++){
+        var a2=k*Math.PI/3;
+        ctx.strokeStyle=theme.accent; ctx.lineWidth=1.6;
+        ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(discR*Math.cos(a2),discR*Math.sin(a2)); ctx.stroke();
+      }
+      ctx.restore();
+      HLP.label(ctx, cx, H-14, "\u03a9 = "+Omega.toFixed(3)+" rad/s   (period "+out.readouts[2].value.toFixed(2)+" s)", theme, 12.5, theme.accent, "center");
+    }
+  },
+  compute:function(vals){
+    var g=981;
+    var I=0.5*vals.Mw*vals.Rw*vals.Rw;
+    var Lspin=I*vals.omega;
+    var torque=vals.Mw*g*vals.d;
+    var Omega=torque/Lspin;
+    var Tprecess=2*Math.PI/Omega;
+    return {readouts:[{label:"Spin angular momentum, L", value:Lspin, unit:"g\u00b7cm\u00b2/s"},{label:"Precession rate, \u03a9", value:Omega, unit:"rad/s"},{label:"Precession period, T", value:Tprecess, unit:"s"}], chartY:Omega};
+  },
+  guideHref:"../docs-mechanics/experiments/gyroscopic-precession/"
+};
+
+})(window.__MECH_PANELS__);
+</script>
+<script>
+window.__MECH_PANELS__ = window.__MECH_PANELS__ || {};
+(function(P){
+
+P["panel-wsVibIsolation"] = {
+  navLabel:"WS1: Vibration Isolation", kicker:"Industrial Workshop 1 of 6",
+  title:"Vibration Isolation &amp; Machine Mounting",
+  formula:"TR = &radic;[(1+(2&zeta;r)&sup2;)/((1&minus;r&sup2;)&sup2;+(2&zeta;r)&sup2;)], &nbsp; r=&omega;/&omega;n",
+  controls:[
+    {key:"k", label:"Mount stiffness, k", min:500, max:8000, step:100, def:3000, unit:"N/m"},
+    {key:"zeta", label:"Damping ratio, ζ", min:0.02, max:0.60, step:0.01, def:0.10, unit:""},
+    {key:"mass", label:"Machine mass", min:20, max:80, step:1, def:45, unit:"kg"}
+  ],
+  primaryIndex:0,
+  chartXLabel:"Mount stiffness, k (N/m)", chartYLabel:"Transmissibility", chartTitle:"Transmissibility vs Mount Stiffness",
+  chartNote:"Target: transmissibility ≤ 0.15 at the 1500 rpm operating speed. Softer mounts (lower k) generally isolate better.",
+  anim: {
+    height: 230,
+    caption: "The machine vibrates at its 1500 rpm operating speed; watch how much of that shake reaches the floor through the isolator mount.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var TR = out.readouts[1].value;
+      var speedRpm=1500, omega=speedRpm*2*Math.PI/60;
+      var machineAmp = 10;
+      var y = machineAmp*Math.sin(omega*t*0.15);
+      var cx=W/2, floorY=H-24, machineY=H*0.32;
+      var halfW = 50 + (vals.mass-20)/(80-20)*40;
+      var thick = 22 + (vals.mass-20)/(80-20)*20;
+      var coils = Math.round(4 + (8000-vals.k)/(8000-500)*8);
+      var coilAmp = 5 + (8000-vals.k)/(8000-500)*7;
+      var dashW = 5 + (vals.zeta-0.02)/(0.60-0.02)*11;
+      HLP.rod(ctx, cx-halfW, machineY+y, cx+halfW, machineY+y, thick, theme, theme.panel);
+      HLP.label(ctx, cx, machineY+y+6, "MACHINE ("+vals.mass.toFixed(0)+" kg)", theme, 11, theme.ink, "center");
+      HLP.spring(ctx, cx-halfW*0.65, machineY+thick/2+y, cx-halfW*0.65, floorY+(TR*Math.sin(omega*t*0.15)*8), coils, coilAmp, theme);
+      HLP.spring(ctx, cx+halfW*0.65, machineY+thick/2+y, cx+halfW*0.65, floorY+(TR*Math.sin(omega*t*0.15)*8), coils, coilAmp, theme);
+      HLP.dashpot(ctx, cx, machineY+thick/2+y, cx, floorY+(TR*Math.sin(omega*t*0.15)*8), theme, dashW);
+      var floorShake = TR*10*Math.sin(omega*t*0.15);
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(cx-100, floorY+floorShake); ctx.lineTo(cx+100, floorY+floorShake); ctx.stroke();
+      var n=12;
+      ctx.lineWidth=1.4;
+      for(var i=0;i<n;i++){
+        var x = cx-100+200*i/(n-1);
+        ctx.beginPath(); ctx.moveTo(x,floorY+floorShake); ctx.lineTo(x-8,floorY+floorShake+14); ctx.stroke();
+      }
+      HLP.label(ctx, cx, floorY+40, "Transmissibility = "+TR.toFixed(3)+"  (floor shake scaled for visibility)", theme, 12, theme.accent, "center");
+      HLP.label(ctx, cx, floorY+56, "k = "+vals.k.toFixed(0)+" N/m   \u03b6 = "+vals.zeta.toFixed(2), theme, 10.5, theme.ink, "center");
+    }
+  },
+  compute:function(vals){
+    var speedRpm=1500, omega=speedRpm*2*Math.PI/60;
+    var omegan = Math.sqrt(vals.k/vals.mass);
+    var r = omega/omegan;
+    var TR = Math.sqrt((1+Math.pow(2*vals.zeta*r,2))/(Math.pow(1-r*r,2)+Math.pow(2*vals.zeta*r,2)));
+    var pass = TR<=0.15;
+    var score = Math.max(0, Math.min(100, 100*(1-TR/0.30)));
+    return {readouts:[{label:"Frequency ratio r", value:r, unit:""},{label:"Transmissibility", value:TR, unit:""}],
+      verdict:{pass:pass, text: pass? "✓ Certified (TR ≤ 0.15)" : "✗ Not certified — reduce TR further", score:score}, chartY:TR};
+  },
+  guideHref:"../docs-mechanics/workshops/vibration-isolation/",
+  isWorkshop:true
+};
+
+P["panel-wsNDT"] = {
+  navLabel:"WS2: Ultrasonic NDT", kicker:"Industrial Workshop 2 of 6",
+  title:"Ultrasonic Non-Destructive Testing — Flaw Detection",
+  formula:"depth = v &times; t / 2",
+  controls:[
+    {key:"freq", label:"Probe frequency", min:1, max:10, step:0.5, def:5, unit:"MHz"},
+    {key:"gain", label:"Gain", min:0, max:60, step:1, def:30, unit:"dB"}
+  ],
+  primaryIndex:1,
+  chartXLabel:"Gain (dB)", chartYLabel:"Detection confidence (%)", chartTitle:"Detection Confidence vs Gain",
+  chartNote:"Both too little and too much gain reduce reliability; the true defect lies at 32.0 mm depth.",
+  anim: {
+    height: 250,
+    caption: "The probe sends a pulse into the block; watch the trace below for the defect echo arriving before the back-wall echo.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var depth = out.readouts[0].value;
+      var blockX1=W*0.25, blockX2=W*0.75, blockTop=20, blockBot=H*0.58, thickness=60;
+      ctx.fillStyle=theme.panel; ctx.strokeStyle=theme.ink; ctx.lineWidth=1.8;
+      ctx.fillRect(blockX1,blockTop,blockX2-blockX1,blockBot-blockTop); ctx.strokeRect(blockX1,blockTop,blockX2-blockX1,blockBot-blockTop);
+      var defectY = blockTop+(blockBot-blockTop)*(depth/thickness);
+      ctx.fillStyle=theme.gold; ctx.globalAlpha=0.55;
+      ctx.beginPath(); ctx.ellipse((blockX1+blockX2)/2, defectY, 14,7,0,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
+      ctx.strokeStyle=theme.gold; ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.ellipse((blockX1+blockX2)/2, defectY, 14,7,0,0,Math.PI*2); ctx.stroke();
+      var probeX=(blockX1+blockX2)/2;
+      ctx.fillStyle=theme.ink;
+      ctx.fillRect(probeX-16, blockTop-18, 32, 18);
+      var pulsePeriod=1.2, phase=(t%pulsePeriod)/pulsePeriod;
+      var pulseY = blockTop + phase*(blockBot-blockTop);
+      var pulseR = 2 + (10-vals.freq)/(10-1)*3;
+      if(phase<0.92){
+        ctx.fillStyle=theme.accent;
+        ctx.beginPath(); ctx.arc(probeX,pulseY,pulseR,0,Math.PI*2); ctx.fill();
+      }
+      // scope trace
+      var scopeX1=blockX1, scopeX2=blockX2, scopeY=H-56, scopeH=44;
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=1.4;
+      ctx.strokeRect(scopeX1,scopeY,scopeX2-scopeX1,scopeH);
+      ctx.strokeStyle=theme.accent; ctx.lineWidth=1.8;
+      ctx.beginPath();
+      var n=200;
+      var tFrac = phase;
+      var gainFactor = Math.min(1.5, 0.35+vals.gain/45);
+      for(var i=0;i<=n;i++){
+        var f=i/n;
+        var yv=0;
+        if(f<0.03) yv=1;
+        var defF = depth/thickness*0.94;
+        var backF = 0.94;
+        if(Math.abs(f-defF)<0.012 && f<=tFrac) yv=Math.min(1, 0.6*gainFactor);
+        if(Math.abs(f-backF)<0.012 && f<=tFrac) yv=Math.min(1, 0.85*gainFactor);
+        var x=scopeX1+(scopeX2-scopeX1)*f;
+        var y=scopeY+scopeH-4-yv*(scopeH-8);
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+      var sweepX = scopeX1+(scopeX2-scopeX1)*tFrac;
+      ctx.strokeStyle=theme.gold; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(sweepX,scopeY); ctx.lineTo(sweepX,scopeY+scopeH); ctx.stroke();
+      HLP.label(ctx, W/2, H-6, "Reported depth = "+depth.toFixed(1)+" mm  (true defect: 32.0 mm)   f="+vals.freq.toFixed(1)+"MHz  gain="+vals.gain.toFixed(0)+"dB", theme, 10.5, theme.ink, "center");
+    }
+  },
+  compute:function(vals){
+    var trueDepth=32.0;
+    var confGain = 100*Math.exp(-Math.pow(vals.gain-35,2)/(2*20*20));
+    var confFreq = 100*Math.exp(-Math.pow(vals.freq-5,2)/(2*3*3));
+    var confidence = Math.sqrt(confGain*confFreq);
+    var depthReported = trueDepth + (5-vals.freq)*0.3 + (35-vals.gain)*0.02;
+    var withinTol = Math.abs(depthReported-trueDepth)<=1.0 && confidence>=70;
+    var depthScore = Math.max(0, Math.min(100, 100*(1-Math.abs(depthReported-trueDepth)/2)));
+    var score = Math.max(0, Math.min(100, (depthScore+confidence)/2));
+    return {readouts:[{label:"Reported defect depth", value:depthReported, unit:"mm"},{label:"Detection confidence", value:confidence, unit:"%"}],
+      verdict:{pass:withinTol, text: withinTol? "✓ Defect located within tolerance" : "✗ Refine frequency/gain", score:score}, chartY:confidence};
+  },
+  guideHref:"../docs-mechanics/workshops/ultrasonic-ndt/",
+  isWorkshop:true
+};
+
+P["panel-wsBeamLoad"] = {
+  navLabel:"WS3: Beam Load Testing", kicker:"Industrial Workshop 3 of 6",
+  title:"Structural Beam Load Testing &amp; Strain Certification",
+  formula:"&sigma;=M/Z, &nbsp; &delta;=PL&sup3;/(48EI), &nbsp; FoS=&sigma;_yield/&sigma;",
+  controls:[
+    {key:"load", label:"Applied load", min:0, max:15, step:0.5, def:12, unit:"kN"},
+    {key:"Z", label:"Section modulus", min:40, max:120, step:1, def:70, unit:"cm³"},
+    {key:"I", label:"Second moment of area", min:800, max:4000, step:10, def:2000, unit:"cm⁴"}
+  ],
+  primaryIndex:0,
+  chartXLabel:"Applied load (kN)", chartYLabel:"Strain (microstrain)", chartTitle:"Strain vs Applied Load",
+  chartNote:"Design load 12 kN, span 4 m, yield stress 250 MPa, E = 200 GPa. Target factor of safety ≥ 2.5 and deflection ≤ span/300 (13.3 mm).",
+  anim: {
+    height: 220,
+    caption: "The beam deflects under the applied load; the dial gauge needle traces the same deflection you're reading in the box above.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var defl_mm = out.readouts[2].value;
+      var midY=H*0.5, spanL=W*0.6, x1=W*0.2, x2=x1+spanL;
+      function support(x){
+        ctx.fillStyle=theme.panel; ctx.strokeStyle=theme.ink; ctx.lineWidth=1.6;
+        ctx.beginPath(); ctx.moveTo(x-14,midY+26); ctx.lineTo(x+14,midY+26); ctx.lineTo(x,midY+6); ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+      support(x1); support(x2);
+      var settle = 1-Math.exp(-t*1.5);
+      var sag = Math.min(H*0.22, 6+Math.abs(defl_mm)*3)*settle*(defl_mm>=0?1:-1);
+      var n=24, pts=[];
+      for(var i=0;i<=n;i++){
+        var f=i/n; var d = sag*4*f*(1-f);
+        pts.push([x1+spanL*f, midY+d]);
+      }
+      var beamThick = 4 + (vals.I-800)/(4000-800)*10;
+      var loadR = 6 + vals.load/15*10;
+      ctx.strokeStyle=theme.accent; ctx.lineWidth=beamThick; ctx.lineCap='round';
+      ctx.beginPath(); pts.forEach(function(p,i){ if(i===0) ctx.moveTo(p[0],p[1]); else ctx.lineTo(p[0],p[1]); }); ctx.stroke();
+      ctx.lineCap='butt';
+      var mid = pts[Math.floor(n/2)];
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.moveTo(mid[0],mid[1]); ctx.lineTo(mid[0],mid[1]+30); ctx.stroke();
+      HLP.weight(ctx,mid[0],mid[1]+38+loadR-10,loadR,theme,"P",theme.gold);
+      // dial gauge
+      var gx=W*0.85, gy=H*0.3, gr=24;
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(gx,gy,gr,0,Math.PI*2); ctx.stroke();
+      var needleAngle = -Math.PI/2 + (defl_mm/15)*Math.PI*1.2*settle;
+      ctx.strokeStyle=theme.gold; ctx.lineWidth=2.2;
+      ctx.beginPath(); ctx.moveTo(gx,gy); ctx.lineTo(gx+gr*0.8*Math.cos(needleAngle), gy+gr*0.8*Math.sin(needleAngle)); ctx.stroke();
+      HLP.label(ctx, gx, gy+gr+16, "dial gauge", theme, 10, theme.ink, "center");
+      HLP.label(ctx, W*0.4, H-6, "Deflection = "+defl_mm.toFixed(2)+" mm   (Z="+vals.Z.toFixed(0)+"cm\u00b3, I="+vals.I.toFixed(0)+"cm\u2074)", theme, 11, theme.accent, "center");
+    }
+  },
+  compute:function(vals){
+    var span=4, yieldMPa=250, E=200e9;
+    var P_N = vals.load*1000;
+    var M = P_N*span/4;
+    var Z_m3 = vals.Z*1e-6;
+    var stressPa = M/Z_m3;
+    var stressMPa = stressPa/1e6;
+    var I_m4 = vals.I*1e-8;
+    var defl_m = (P_N*Math.pow(span,3))/(48*E*I_m4);
+    var defl_mm = defl_m*1000;
+    var FoS = yieldMPa/stressMPa;
+    var strain_micro = (stressPa/E)*1e6;
+    var pass = FoS>=2.5 && defl_mm<=(span*1000/300);
+    var FoSScore = Math.max(0, Math.min(100, 100*FoS/3.5));
+    var deflScore = Math.max(0, Math.min(100, 100*(20-defl_mm)/20));
+    var score = Math.max(0, Math.min(100, (FoSScore+deflScore)/2));
+    return {readouts:[{label:"Max. stress", value:stressMPa, unit:"MPa"},{label:"Factor of safety", value:FoS, unit:""},{label:"Deflection", value:defl_mm, unit:"mm"}],
+      verdict:{pass:pass, text: pass? "✓ Certified for service" : "✗ Not certified — check FoS/deflection", score:score}, chartY:strain_micro};
+  },
+  guideHref:"../docs-mechanics/workshops/beam-load-testing/",
+  isWorkshop:true
+};
+
+P["panel-wsRotorBalance"] = {
+  navLabel:"WS4: Rotor Balancing", kicker:"Industrial Workshop 4 of 6",
+  title:"Rotor Balancing Workshop",
+  formula:"Residual = |U&#8407; + T&#8407;|  (vector sum of unbalance and trim)",
+  controls:[
+    {key:"trimMass", label:"Trim mass", min:0, max:40, step:1, def:20, unit:"g"},
+    {key:"radius", label:"Trim mass radius", min:3, max:15, step:0.5, def:8, unit:"cm"},
+    {key:"angle", label:"Trim mass angle", min:0, max:360, step:5, def:180, unit:"°"}
+  ],
+  primaryIndex:0,
+  chartXLabel:"Trim mass (g)", chartYLabel:"Residual vibration (mm/s)", chartTitle:"Residual Vibration vs Trim Mass",
+  chartNote:"Hidden unbalance: 18 g·radius-equivalent at 8 cm, angular location 20°. Correct trim is diametrically opposite (≈200°).",
+  anim: {
+    height: 230,
+    caption: "The rotor spins continuously; the red heavy-spot and green trim mass rotate together \u2014 place the trim mass to cancel the residual vibration arrow.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var vib = out.readouts[1].value;
+      var cx=W*0.4, cy=H/2, R=Math.min(W,H)*0.3;
+      var spin = t*4.2;
+      ctx.save(); ctx.translate(cx,cy); ctx.rotate(spin);
+      ctx.fillStyle=theme.panel; ctx.strokeStyle=theme.ink; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(0,0,R,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      var angU=20*Math.PI/180, ru=8/15*R;
+      ctx.fillStyle='#b03a2e';
+      ctx.beginPath(); ctx.arc(ru*Math.cos(angU), ru*Math.sin(angU), 8,0,Math.PI*2); ctx.fill();
+      var angT=vals.angle*Math.PI/180, rt=Math.min(1,vals.radius/15)*R;
+      ctx.fillStyle=theme.accent;
+      ctx.beginPath(); ctx.arc(rt*Math.cos(angT), rt*Math.sin(angT), 6+vals.trimMass/8,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+      // vibration vector at the bearing (fixed, not spinning) scaled to residual
+      var vx=cx+R+50, vy=cy;
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=1.2;
+      ctx.beginPath(); ctx.arc(vx,vy,3,0,Math.PI*2); ctx.stroke();
+      var vecLen = Math.min(60, vib*18);
+      var vecAng = spin*0.3;
+      ctx.strokeStyle=theme.gold; ctx.lineWidth=2.4;
+      ctx.beginPath(); ctx.moveTo(vx,vy); ctx.lineTo(vx+vecLen*Math.cos(vecAng), vy+vecLen*Math.sin(vecAng)); ctx.stroke();
+      HLP.label(ctx, vx, vy-70, "bearing", theme, 10.5, theme.ink, "center");
+      HLP.label(ctx, vx, vy+70, "vibration", theme, 10.5, theme.gold, "center");
+      HLP.label(ctx, cx, cy+R+30, "Residual vibration = "+vib.toFixed(2)+" mm/s", theme, 12, theme.accent, "center");
+    }
+  },
+  compute:function(vals){
+    var mu=18, ru=8, angU=20;
+    var Ux = mu*ru*Math.cos(angU*Math.PI/180), Uy = mu*ru*Math.sin(angU*Math.PI/180);
+    var Tx = vals.trimMass*vals.radius*Math.cos(vals.angle*Math.PI/180), Ty = vals.trimMass*vals.radius*Math.sin(vals.angle*Math.PI/180);
+    var resX = Ux+Tx, resY = Uy+Ty;
+    var residual_gcm = Math.sqrt(resX*resX+resY*resY);
+    var vibration = residual_gcm*0.02;
+    var pass = vibration<=2.8;
+    var score = Math.max(0, Math.min(100, 100*(1-vibration/5.6)));
+    return {readouts:[{label:"Residual unbalance", value:residual_gcm, unit:"g·cm"},{label:"Residual vibration", value:vibration, unit:"mm/s"}],
+      verdict:{pass:pass, text: pass? "✓ Within ISO 1940 G6.3" : "✗ Adjust trim mass/angle", score:score}, chartY:vibration};
+  },
+  guideHref:"../docs-mechanics/workshops/rotor-balancing/",
+  isWorkshop:true
+};
+
+P["panel-wsViscometer"] = {
+  navLabel:"WS5: Viscometer Calibration", kicker:"Industrial Workshop 5 of 6",
+  title:"Viscometer Calibration &amp; Lubricant Grading",
+  formula:"&eta;_unknown = (&eta;_ref/t_ref) &times; t_unknown",
+  controls:[
+    {key:"tRef", label:"Fall time, reference oil", min:20, max:200, step:1, def:100, unit:"s"},
+    {key:"tUnk", label:"Fall time, unknown sample", min:20, max:200, step:1, def:130, unit:"s"}
+  ],
+  primaryIndex:1,
+  chartXLabel:"Fall time, unknown sample (s)", chartYLabel:"Viscosity (cSt)", chartTitle:"Viscosity vs Fall Time",
+  chartNote:"Reference oil is certified at 46 cSt (ISO VG46). Standard grades: 22, 32, 46, 68, 100, 150 cSt (±10% tolerance each).",
+  anim: {
+    height: 230,
+    caption: "Identical balls fall through the reference oil and the unknown sample side by side \u2014 the one that falls slower is more viscous.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var tubeTop=20, tubeBot=H-20, tubeW=70;
+      var x1=W*0.3, x2=W*0.7;
+      [ [x1,"Reference",vals.tRef], [x2,"Unknown",vals.tUnk] ].forEach(function(spec){
+        var x=spec[0], label=spec[1], tfall=spec[2];
+        ctx.strokeStyle=theme.ink; ctx.lineWidth=1.8;
+        ctx.beginPath(); ctx.moveTo(x-tubeW/2,tubeTop); ctx.lineTo(x-tubeW/2,tubeBot); ctx.lineTo(x+tubeW/2,tubeBot); ctx.lineTo(x+tubeW/2,tubeTop); ctx.stroke();
+        ctx.fillStyle=theme.accent; ctx.globalAlpha=0.28;
+        ctx.fillRect(x-tubeW/2+2,tubeTop+2,tubeW-4,tubeBot-tubeTop-4); ctx.globalAlpha=1;
+        var cyclePeriod = Math.max(0.6, tfall/40);
+        var phase = (t % cyclePeriod)/cyclePeriod;
+        var by = tubeTop+18 + phase*(tubeBot-tubeTop-36);
+        HLP.weight(ctx,x,by,8,theme,null,theme.gold);
+        HLP.label(ctx, x, tubeTop-6, label, theme, 12, theme.ink, "center");
+      });
+      HLP.label(ctx, W/2, H-2, "Fall time \u2014 ref: "+vals.tRef.toFixed(0)+"s   unknown: "+vals.tUnk.toFixed(0)+"s", theme, 11.5, theme.accent, "center");
+    }
+  },
+  compute:function(vals){
+    var refVisc=46;
+    var calibConst = refVisc/vals.tRef;
+    var unknownVisc = calibConst*vals.tUnk;
+    var grades=[22,32,46,68,100,150];
+    var nearest = grades.reduce(function(a,b){return Math.abs(b-unknownVisc)<Math.abs(a-unknownVisc)?b:a;});
+    var within = Math.abs(unknownVisc-nearest)/nearest <= 0.10;
+    var pctOff = Math.abs(unknownVisc-nearest)/nearest;
+    var score = Math.max(0, Math.min(100, 100*(1-pctOff/0.20)));
+    return {readouts:[{label:"Calibration constant", value:calibConst, unit:"cSt/s"},{label:"Unknown sample viscosity", value:unknownVisc, unit:"cSt"},{label:"Nearest ISO VG class", value:nearest, unit:"cSt"}],
+      verdict:{pass:within, text: within? "✓ Graded ISO VG"+nearest : "✗ Outside grade tolerance", score:score}, chartY:unknownVisc};
+  },
+  guideHref:"../docs-mechanics/workshops/viscometer-calibration/",
+  isWorkshop:true
+};
+
+P["panel-wsShockAbsorber"] = {
+  navLabel:"WS6: Shock Absorber Design", kicker:"Industrial Workshop 6 of 6",
+  title:"Automotive Shock-Absorber Damping Design",
+  formula:"&zeta; = c / (2&radic;(km))",
+  controls:[
+    {key:"c", label:"Damping coefficient, c", min:500, max:6000, step:50, def:2000, unit:"N·s/m"},
+    {key:"k", label:"Spring stiffness, k", min:15000, max:40000, step:500, def:25000, unit:"N/m"},
+    {key:"mass", label:"Sprung mass", min:300, max:550, step:5, def:400, unit:"kg"}
+  ],
+  primaryIndex:0,
+  chartXLabel:"Damping coefficient, c (N·s/m)", chartYLabel:"Damping ratio, ζ", chartTitle:"Damping Ratio vs Damping Coefficient",
+  chartNote:"Target damping ratio range: 0.2 – 0.4, balancing ride comfort against road holding.",
+  anim: {
+    height: 230,
+    caption: "The car body bounces on its spring and damper after a bump \u2014 tune the damping to control how quickly it settles.",
+    draw: function(ctx,W,H,vals,out,t,theme){
+      var HLP = window.__MECH_HELPERS__;
+      HLP.clear(ctx,W,H,theme);
+      var zeta = out.readouts[0].value;
+      var omegan = Math.sqrt(vals.k/vals.mass);
+      var omegad = omegan*Math.sqrt(Math.max(1-zeta*zeta,0.0001));
+      var resetPeriod = Math.max(2, 6/Math.max(omegan*zeta,0.1));
+      var tt = t % resetPeriod;
+      var A0 = 40;
+      var y = zeta<1 ? A0*Math.exp(-zeta*omegan*tt)*Math.cos(omegad*tt) : A0*Math.exp(-omegan*tt);
+      var cx=W/2, roadY=H-24, bodyRestY=H*0.34;
+      ctx.strokeStyle=theme.ink; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(cx-100,roadY); ctx.lineTo(cx+100,roadY); ctx.stroke();
+      var wheelY = roadY-16;
+      ctx.fillStyle=theme.panel; ctx.strokeStyle=theme.ink; ctx.lineWidth=1.8;
+      ctx.beginPath(); ctx.arc(cx,wheelY,16,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      var coils = Math.round(3+(40000-vals.k)/(40000-15000)*6);
+      var coilAmp = 5+(40000-vals.k)/(40000-15000)*6;
+      var dashW = 5+(vals.c-500)/(6000-500)*10;
+      var halfW = 55+(vals.mass-300)/(550-300)*30;
+      var bodyThick = 20+(vals.mass-300)/(550-300)*14;
+      HLP.spring(ctx, cx-30, wheelY-14, cx-30, bodyRestY+y+20, coils, coilAmp, theme);
+      HLP.dashpot(ctx, cx+30, wheelY-14, cx+30, bodyRestY+y+20, theme, dashW);
+      HLP.rod(ctx, cx-halfW, bodyRestY+y, cx+halfW, bodyRestY+y, bodyThick, theme, theme.panel);
+      HLP.label(ctx, cx, bodyRestY+y-bodyThick/2-8, "BODY ("+vals.mass.toFixed(0)+" kg)", theme, 11, theme.ink, "center");
+      HLP.label(ctx, cx, H-4, "\u03b6 = "+zeta.toFixed(3)+"   k="+vals.k.toFixed(0)+"N/m  c="+vals.c.toFixed(0)+"N\u00b7s/m", theme, 11, theme.accent, "center");
+    }
+  },
+  compute:function(vals){
+    var zeta = vals.c/(2*Math.sqrt(vals.k*vals.mass));
+    var overshoot = zeta<1 ? 100*Math.exp(-zeta*Math.PI/Math.sqrt(1-zeta*zeta)) : 0;
+    var contactVar = 40/(1+10*zeta);
+    var pass = zeta>=0.2 && zeta<=0.4;
+    var score = Math.max(0, Math.min(100, 100*(1-Math.abs(zeta-0.3)/0.3)));
+    return {readouts:[{label:"Damping ratio ζ", value:zeta, unit:""},{label:"Bump overshoot", value:overshoot, unit:"%"},{label:"Contact-force variation", value:contactVar, unit:"%"}],
+      verdict:{pass:pass, text: pass? "✓ ζ within target band" : "✗ Adjust damping coefficient", score:score}, chartY:zeta};
+  },
+  guideHref:"../docs-mechanics/workshops/shock-absorber-design/",
+  isWorkshop:true
+};
+
+P["panel-safety"] = {
+  navLabel:"⚠ Safety & Good Practice", kicker:"Safety",
+  title:"Mechanical Lab Safety, Precautions &amp; Potential Harm",
+  staticBody: '<div class="card">' +
+    '<p>Every experiment in this lab that involves a real falling mass, spinning flywheel, stretched wire, swinging pendulum, or pressurized/rotating workshop rig carries real mechanical hazards. Read the full <a class="guide-link" href="../docs-mechanics/safety/" target="_blank">Mechanical Lab Safety guide</a> before touching any physical apparatus.</p>' +
+    '<table class="safety-table"><tr><th>Category</th><th>Typical source</th><th>Hazard level</th></tr>' +
+    '<tr><td>Falling mass</td><td>Flywheel falling-mass method</td><td>Impact/crush injury</td></tr>' +
+    '<tr><td>Rotating machinery</td><td>Flywheels, discs, rotors</td><td>Entanglement, impact</td></tr>' +
+    '<tr><td>Wire under tension</td><td>Searle&#39;s, static torsion</td><td>Whiplash if wire snaps</td></tr>' +
+    '<tr><td>Swinging bodies</td><td>Pendulums, Barton&#39;s pendulums</td><td>Impact injury</td></tr>' +
+    '<tr><td>Fine glassware</td><td>Capillary tubes, viscometer jars</td><td>Cuts from broken glass</td></tr>' +
+    '<tr><td>Electrical/RF</td><td>Ultrasonic interferometer, NDT probes</td><td>Electric shock (supervised only)</td></tr>' +
+    '</table>' +
+    '<p class="note">This panel summarizes the guide; it is not a substitute for institutional safety training or a specific risk assessment before handling real apparatus.</p>' +
+    '</div>'
+};
+
+})(window.__MECH_PANELS__);
+</script>
+<script>
+(function(){
+  "use strict";
+
+  var GROUPS = [
+    {title:"Rotational Dynamics", ids:["panel-bifilar","panel-torsional","panel-flywheel","panel-compound-pendulum"]},
+    {title:"Elasticity of Solids", ids:["panel-cantilever","panel-uniform-bending","panel-searle","panel-static-torsion"]},
+    {title:"Fluid Properties", ids:["panel-poiseuille","panel-stokes","panel-capillary-rise"]},
+    {title:"Oscillations & Acoustics (PG)", ids:["panel-coupled-pendulums","panel-damped-oscillations","panel-forced-resonance","panel-ultrasonic"]},
+    {title:"Practical Applications", ids:["panel-ballistic-pendulum","panel-rolling-race","panel-gyroscope"]},
+    {title:"Safety", ids:["panel-safety"]},
+    {title:"Industrial Workshops", ids:["panel-wsVibIsolation","panel-wsNDT","panel-wsBeamLoad","panel-wsRotorBalance","panel-wsViscometer","panel-wsShockAbsorber"]}
+  ];
+
+  var lastVals = {}, lastOut = {}, currentPanelId = null, animStart = performance.now();
+  var animRunning = {}, animElapsed = {}, lastFrameTime = null;
+
+  /* PANELS is defined in engine_panels.js, loaded just before this closure runs
+     (concatenated directly above this file at build time). */
+  var PANELS = window.__MECH_PANELS__;
+
+  function fmt(x){
+    if (x === undefined || x === null || isNaN(x)) return "—";
+    var a = Math.abs(x);
+    if (a !== 0 && (a < 0.001 || a > 100000)) return x.toExponential(3);
+    if (a >= 100) return x.toFixed(1);
+    if (a >= 1) return x.toFixed(3);
+    return x.toFixed(4);
+  }
+
+  function buildSidebar(){
+    var nav = document.getElementById('sidebarNav');
+    var html = '';
+    GROUPS.forEach(function(g){
+      html += '<h4>'+g.title+'</h4>';
+      g.ids.forEach(function(id){
+        var cfg = PANELS[id];
+        if(!cfg) return;
+        html += '<a href="#'+id+'" data-target="'+id+'">'+cfg.navLabel+'</a>';
+      });
+    });
+    nav.innerHTML = html;
+  }
+
+  function buildPanelDom(id){
+    var cfg = PANELS[id];
+    var section = document.createElement('section');
+    section.className = 'panel';
+    section.id = id;
+    var html = '<div class="kicker">'+cfg.kicker+'</div><h2>'+cfg.title+'</h2>';
+    if(cfg.intro) html += '<p>'+cfg.intro+'</p>';
+    if(cfg.formula) html += '<div class="formula">'+cfg.formula+'</div>';
+
+    if(cfg.staticBody){
+      html += cfg.staticBody;
+      section.innerHTML = html;
+      return section;
+    }
+
+    if(cfg.anim){
+      html += '<div class="card anim-card"><div class="anim-label"><span>🔴 Live physical simulation — watch it move as you adjust the sliders below</span>' +
+        '<button type="button" class="anim-startstop" id="startstop-'+id+'" data-id="'+id+'">▶ Start Simulation</button></div>' +
+        '<canvas id="anim-'+id+'" height="'+(cfg.anim.height||240)+'" class="anim-canvas"></canvas>' +
+        (cfg.anim.caption? '<div class="note">'+cfg.anim.caption+'</div>' : '') + '</div>';
+    }
+
+    html += '<div class="card"><div class="controls-grid">';
+    cfg.controls.forEach(function(c){
+      if(c.type === 'select'){
+        html += '<div class="ctrl-row"><label>'+c.label+'</label><select id="ctrl-'+id+'-'+c.key+'">';
+        c.options.forEach(function(o,i){
+          html += '<option value="'+o.value+'"'+(i===c.defaultIndex?' selected':'')+'>'+o.label+'</option>';
+        });
+        html += '</select></div>';
+      } else {
+        html += '<div class="ctrl-row"><label>'+c.label+' <span class="val" id="val-'+id+'-'+c.key+'"></span></label>'+
+          '<input type="range" id="ctrl-'+id+'-'+c.key+'" min="'+c.min+'" max="'+c.max+'" step="'+c.step+'" value="'+c.def+'"></div>';
+      }
+    });
+    html += '</div>';
+    html += '<div class="readouts" id="readouts-'+id+'"></div>';
+    html += '<div id="verdict-'+id+'"></div>';
+    if(cfg.isWorkshop){
+      html += '<div class="ws-gauge-row"><canvas id="gauge-'+id+'" width="110" height="110"></canvas>' +
+        '<div><div class="ws-gauge-pct" id="pct-'+id+'">0%</div><div style="font-size:.85rem;color:var(--ink-soft);">Precision score — reach 100% to unlock your certificate</div></div></div>';
+      html += '<div class="cert-unlock" id="certbox-'+id+'"></div>';
+    }
+    html += '</div>';
+    html += '<div class="card"><canvas id="chart-'+id+'" height="360"></canvas>' +
+      '<div class="note">'+ (cfg.chartNote||'') +'</div></div>';
+    if(cfg.note) html += '<div class="note">'+cfg.note+'</div>';
+    if(cfg.guideHref) html += '<a class="guide-link" href="'+cfg.guideHref+'" target="_blank">📖 Open full theory &amp; procedure in the User Guide &rarr;</a>';
+    section.innerHTML = html;
+    return section;
+  }
+
+  function wirePanel(id){
+    var cfg = PANELS[id];
+    if(cfg.staticBody) return;
+    cfg.controls.forEach(function(c){
+      var el = document.getElementById('ctrl-'+id+'-'+c.key);
+      el.addEventListener('input', function(){ recompute(id); });
+    });
+    if(cfg.anim){
+      animRunning[id] = false;
+      animElapsed[id] = 0;
+      var btn = document.getElementById('startstop-'+id);
+      if(btn) btn.addEventListener('click', function(){ toggleAnim(id); });
+    }
+    recompute(id);
+  }
+
+  function readVals(id){
+    var cfg = PANELS[id];
+    var vals = {};
+    cfg.controls.forEach(function(c){
+      var el = document.getElementById('ctrl-'+id+'-'+c.key);
+      var v = parseFloat(el.value);
+      vals[c.key] = v;
+      var valSpan = document.getElementById('val-'+id+'-'+c.key);
+      if(valSpan){
+        if(c.type==='select'){
+          var opt = c.options.filter(function(o){return String(o.value)===String(el.value);})[0];
+        } else {
+          valSpan.textContent = (Number.isInteger(c.step) ? v.toFixed(0) : v) + (c.unit?(' '+c.unit):'');
+        }
+      }
+    });
+    return vals;
+  }
+
+  function recompute(id){
+    var cfg = PANELS[id];
+    var vals = readVals(id);
+    var out = cfg.compute(vals);
+    lastVals[id] = vals; lastOut[id] = out;
+    var rHost = document.getElementById('readouts-'+id);
+    rHost.innerHTML = out.readouts.map(function(r){
+      return '<div class="readout-box"><div class="rlabel">'+r.label+'</div><div class="rval">'+fmt(r.value)+(r.unit?(' '+r.unit):'')+'</div></div>';
+    }).join('');
+    var vHost = document.getElementById('verdict-'+id);
+    if(out.verdict){
+      vHost.innerHTML = '<span class="verdict '+(out.verdict.pass?'pass':'fail')+'">'+out.verdict.text+'</span>';
+    } else {
+      vHost.innerHTML = '';
+    }
+    if(cfg.isWorkshop && out.verdict && typeof out.verdict.score === 'number'){
+      // Round once and reuse everywhere — toFixed(0) alone would round e.g. 99.6
+      // up to a displayed "100%" while the raw score still fails a >=100 check,
+      // permanently hiding the certificate even though the gauge/text read 100%.
+      var score = Math.round(out.verdict.score);
+      document.getElementById('pct-'+id).textContent = score+'%';
+      drawGauge('gauge-'+id, score);
+      var certBox = document.getElementById('certbox-'+id);
+      if(score>=100){
+        certBox.classList.add('show');
+        if(!certBox.dataset.rendered){
+          certBox.innerHTML = '<b>🎉 100% precision achieved — Workshop Certified!</b><br>'+
+            'Enter your name for the certificate: '+
+            '<input type="text" id="name-'+id+'" placeholder="Your full name">'+
+            '<button onclick="generateWsCertificate(\''+id+'\',\''+cfg.title.replace(/'/g,"\\'")+'\')">Generate Certificate</button>';
+          certBox.dataset.rendered = '1';
+        }
+      } else {
+        certBox.classList.remove('show');
+        certBox.innerHTML = '';
+        certBox.dataset.rendered = '';
+      }
+    }
+    drawChart(id, cfg, vals, out);
+  }
+
+  function drawGauge(canvasId, pct){
+    var canvas = document.getElementById(canvasId);
+    if(!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var w=canvas.width, h=canvas.height, cx=w/2, cy=h/2, r=46;
+    ctx.clearRect(0,0,w,h);
+    ctx.lineWidth=10; ctx.lineCap='round';
+    ctx.strokeStyle="#e5ddc8";
+    ctx.beginPath(); ctx.arc(cx,cy,r,-Math.PI/2,1.5*Math.PI); ctx.stroke();
+    var color = pct>=90 ? "#1F6E43" : pct>=60 ? "#C97A27" : "#a8452f";
+    ctx.strokeStyle=color;
+    ctx.beginPath(); ctx.arc(cx,cy,r,-Math.PI/2, -Math.PI/2 + (pct/100)*2*Math.PI); ctx.stroke();
+  }
+
+  window.generateWsCertificate = function(wsId, title){
+    var nameInput = document.getElementById('name-'+wsId);
+    var name = (nameInput && nameInput.value.trim()) || '';
+    if(!name){ alert('Please enter your name before generating the certificate.'); return; }
+    var score = document.getElementById('pct-'+wsId).textContent;
+    document.getElementById('certName').textContent = name;
+    document.getElementById('certWorkshop').textContent = title;
+    document.getElementById('certScore').textContent = score;
+    var today = new Date();
+    document.getElementById('certDate').textContent = 'Issued on ' + today.toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
+    document.getElementById('certOverlay').classList.add('show');
+    document.getElementById('certActionsBar').style.display = 'flex';
+  };
+  window.closeCertificate = function(){
+    document.getElementById('certOverlay').classList.remove('show');
+    document.getElementById('certActionsBar').style.display = 'none';
+  };
+
+  function drawChart(id, cfg, vals, out){
+    var canvas = document.getElementById('chart-'+id);
+    if(!canvas) return;
+    var W = canvas.clientWidth || 640;
+    var H = 360;
+    canvas.width = W; canvas.height = H;
+    var ctx = canvas.getContext('2d');
+    var dark = document.documentElement.getAttribute('data-theme')==='dark';
+    var ink = dark ? '#eef7f0' : '#14251C';
+    var grid = dark ? '#2f4a35' : '#E3EBD6';
+    var accent = dark ? '#4fae7a' : '#1F6E43';
+    var gold = dark ? '#e3c08a' : '#C97A27';
+    ctx.clearRect(0,0,W,H);
+
+    var pad = {l:74, r:24, t:18, b:50};
+    var pw = W - pad.l - pad.r, ph = H - pad.t - pad.b;
+
+    var primary = cfg.controls[cfg.primaryIndex];
+    var lo = primary.min, hi = primary.max;
+    var N = 50;
+    var pts = [];
+    for(var i=0;i<=N;i++){
+      var x = lo + (hi-lo)*i/N;
+      var v2 = {}; for(var k in vals) v2[k]=vals[k];
+      v2[primary.key] = x;
+      var o2 = cfg.compute(v2);
+      pts.push([x, o2.chartY]);
+    }
+    var ys = pts.map(function(p){return p[1];}).filter(function(y){return isFinite(y);});
+    var yMin = Math.min.apply(null, ys), yMax = Math.max.apply(null, ys);
+    if(yMin===yMax){ yMin -= 1; yMax += 1; }
+    var yPad = (yMax-yMin)*0.1 || 1;
+    yMin -= yPad; yMax += yPad;
+
+    function X(x){ return pad.l + (x-lo)/(hi-lo)*pw; }
+    function Y(y){ return pad.t + ph - (y-yMin)/(yMax-yMin)*ph; }
+
+    function fmtTick(v){
+      var av = Math.abs(v);
+      if(av===0) return '0';
+      if(av < 0.001) return v.toExponential(1);
+      if(av < 1) return v.toFixed(3);
+      if(av < 10) return v.toFixed(2);
+      if(av < 100) return v.toFixed(1);
+      return v.toFixed(0);
+    }
+
+    // grid
+    ctx.strokeStyle = grid; ctx.lineWidth = 1;
+    for(var gx=0; gx<=10; gx++){
+      var xx = pad.l + pw*gx/10;
+      ctx.beginPath(); ctx.moveTo(xx,pad.t); ctx.lineTo(xx,pad.t+ph); ctx.stroke();
+    }
+    for(var gy=0; gy<=8; gy++){
+      var yy = pad.t + ph*gy/8;
+      ctx.beginPath(); ctx.moveTo(pad.l,yy); ctx.lineTo(pad.l+pw,yy); ctx.stroke();
+    }
+    ctx.strokeStyle = ink; ctx.lineWidth = 1.5;
+    ctx.strokeRect(pad.l,pad.t,pw,ph);
+
+    // axis tick values, so students can read the scale directly off the graph
+    ctx.fillStyle = ink;
+    ctx.font = '10px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    for(var tgx=0; tgx<=10; tgx+=2){
+      var tvx = lo + (hi-lo)*tgx/10;
+      var txx = pad.l + pw*tgx/10;
+      ctx.fillText(fmtTick(tvx), txx, pad.t+ph+14);
+      // small tick mark
+      ctx.strokeStyle = ink; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(txx, pad.t+ph); ctx.lineTo(txx, pad.t+ph+4); ctx.stroke();
+    }
+    ctx.textAlign = 'right';
+    for(var tgy=0; tgy<=8; tgy+=2){
+      var tvy = yMax - (yMax-yMin)*tgy/8;
+      var tyy = pad.t + ph*tgy/8;
+      ctx.fillText(fmtTick(tvy), pad.l-8, tyy+3);
+      ctx.strokeStyle = ink; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(pad.l-4, tyy); ctx.lineTo(pad.l, tyy); ctx.stroke();
+    }
+    ctx.textAlign = 'center';
+
+    // curve
+    ctx.strokeStyle = accent; ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    pts.forEach(function(p,i){
+      if(!isFinite(p[1])) return;
+      var px = X(p[0]), py = Y(p[1]);
+      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    });
+    ctx.stroke();
+
+    // current point marker
+    var cx = X(vals[primary.key]), cy = Y(out.chartY);
+    if(isFinite(cy)){
+      ctx.fillStyle = gold;
+      ctx.beginPath(); ctx.arc(cx,cy,6,0,7); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth=1.5; ctx.stroke();
+    }
+
+    // labels
+    ctx.fillStyle = ink;
+    ctx.font = '600 12px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(cfg.chartXLabel, pad.l+pw/2, H-8);
+    ctx.save();
+    ctx.translate(16, pad.t+ph/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.fillText(cfg.chartYLabel, 0, 0);
+    ctx.restore();
+    ctx.textAlign='left';
+    ctx.font = '700 13px Inter, sans-serif';
+    ctx.fillText(cfg.chartTitle||'', pad.l, 14);
+  }
+
+  function showPanel(id){
+    document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+    document.querySelectorAll('.sidebar a').forEach(function(a){ a.classList.remove('active'); });
+    var el = document.getElementById(id);
+    if(el){ el.classList.add('active'); }
+    var link = document.querySelector('.sidebar a[data-target="'+id+'"]');
+    if(link) link.classList.add('active');
+    currentPanelId = id;
+    if(PANELS[id] && !PANELS[id].staticBody){
+      setTimeout(function(){ recompute(id); }, 30);
+    }
+  }
+
+  function animLoop(now){
+    if(lastFrameTime===null) lastFrameTime = now;
+    var dt = (now - lastFrameTime)/1000;
+    if(dt<0 || dt>0.25) dt = 0; // clamp huge gaps (tab was backgrounded, etc.)
+    lastFrameTime = now;
+    var id = currentPanelId;
+    var cfg = id && PANELS[id];
+    if(cfg && cfg.anim && lastVals[id]){
+      if(animElapsed[id]===undefined) animElapsed[id] = 0;
+      if(animRunning[id]) animElapsed[id] += dt;
+      var canvas = document.getElementById('anim-'+id);
+      if(canvas){
+        var W = canvas.clientWidth || 640, H = cfg.anim.height||240;
+        if(canvas.width!==W || canvas.height!==H){ canvas.width=W; canvas.height=H; }
+        var ctx = canvas.getContext('2d');
+        var dark = document.documentElement.getAttribute('data-theme')==='dark';
+        var theme = {
+          dark: dark,
+          ink: dark ? '#eef7f0' : '#14251C',
+          bg: dark ? '#10231a' : '#FFFBF0',
+          accent: dark ? '#4fae7a' : '#1F6E43',
+          gold: dark ? '#e3c08a' : '#C97A27',
+          panel: dark ? '#16301f' : '#FBF3E6',
+          grid: dark ? '#2f4a35' : '#E3EBD6'
+        };
+        var t = animElapsed[id];
+        try{
+          cfg.anim.draw(ctx, W, H, lastVals[id], lastOut[id], t, theme);
+          if(!animRunning[id]){
+            ctx.save();
+            ctx.fillStyle = dark ? 'rgba(16,35,26,.5)' : 'rgba(255,251,240,.45)';
+            ctx.fillRect(0,0,W,H);
+            ctx.fillStyle = theme.gold;
+            ctx.font = '700 13px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('⏸ Paused — press "Start Simulation" to run', W/2, H-12);
+            ctx.restore();
+          }
+        }catch(e){ /* fail quietly so one bad frame doesn't kill the loop */ }
+      }
+    }
+    requestAnimationFrame(animLoop);
+  }
+
+  function toggleAnim(id){
+    animRunning[id] = !animRunning[id];
+    var btn = document.getElementById('startstop-'+id);
+    if(btn){
+      if(animRunning[id]){
+        btn.textContent = '⏸ Stop Simulation';
+        btn.classList.add('is-running');
+      } else {
+        btn.textContent = '▶ Start Simulation';
+        btn.classList.remove('is-running');
+      }
+    }
+  }
+
+  function init(){
+    buildSidebar();
+    var host = document.getElementById('panelHost');
+    Object.keys(PANELS).forEach(function(id){
+      host.appendChild(buildPanelDom(id));
+      wirePanel(id);
+    });
+    document.querySelectorAll('.sidebar a').forEach(function(a){
+      a.addEventListener('click', function(e){
+        e.preventDefault();
+        var id = a.getAttribute('data-target');
+        history.replaceState(null,'','#'+id);
+        showPanel(id);
+      });
+    });
+    var initial = (location.hash || '').replace('#','') || Object.keys(PANELS)[0];
+    if(!PANELS[initial]) initial = Object.keys(PANELS)[0];
+    showPanel(initial);
+    requestAnimationFrame(animLoop);
+    window.addEventListener('resize', function(){
+      var active = document.querySelector('.panel.active');
+      if(active && PANELS[active.id] && !PANELS[active.id].staticBody) recompute(active.id);
+    });
+  }
+
+  if(document.readyState==='complete' || document.readyState==='interactive'){
+    setTimeout(init, 20);
+  } else {
+    document.addEventListener('DOMContentLoaded', init);
+  }
+})();
+</script>
+
+<footer class="pagefoot" style="background:var(--navy-deep);color:#c9c2a8;padding:22px;font-size:.88rem;margin-top:20px;">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+    <img src="../assets/brand-orb.jpg" alt="Invertis University mark" style="height:24px;width:24px;border-radius:50%;object-fit:cover;flex:none;" onerror="this.style.display='none'">
+    <img src="../assets/invertis-logo.png" alt="Invertis University logo" style="height:24px;width:auto;" onerror="this.style.display='none'">
+    <strong style="color:#f2d9a6;">Invertis University, Bareilly</strong>
+  </div>
+  Advanced Mechanics &amp; Properties of Matter Lab &middot; Prepared as companion interactive material for the
+  mechanics, elasticity, fluid-properties and oscillations curriculum &middot; All simulations are simplified
+  educational models, not metrology-grade instruments. Full theory, procedure and viva-voce documentation:
+  <a href="../docs-mechanics/index.html" style="color:#f2d9a6;">User Guide &amp; Lab Manual</a>.
+  <hr style="border:none;border-top:1px solid rgba(255,255,255,.12);margin:14px 0;">
+  Prepared &amp; maintained by <strong style="color:#f2d9a6;">Dr. S. K. Jain</strong>, Associate Professor in Physics, Department of Applied Sciences and Humanities, Invertis University, Bareilly, India &middot; <a href="mailto:sanjeev.j@invertis.org" style="color:#f2d9a6;">sanjeev.j@invertis.org</a> &middot; &copy; 2026 Author. Site maintained by Dr. S. K. Jain.
+  <div style="margin-top:12px;text-align:center;">
+    <img src="https://visitor-badge.laobi.icu/badge?page_id=drskjain-mechanics-matter-lab" alt="Visitor count for this page" style="height:20px;vertical-align:middle;border-radius:4px;opacity:.9;">
+  </div>
+</footer>
+
+
+</body>
+</html>
